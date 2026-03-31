@@ -1,0 +1,431 @@
+---
+icon: Route
+title: Routes
+description: Route file conventions, naming, exports, validation (body, params, query), response schemas, and the request context.
+---
+
+# API Routes
+
+This guide covers everything about Reion API routes: file conventions, what you can export from a route file, how validation works (body, params, query), response schemas, and how to use the request context.
+
+---
+
+## Route file conventions
+
+Routes live under your **`router/`** directory. The **folder path under `router/`** determines the URL path; the **file name** determines which HTTP method(s) the file handles.
+
+### Two file patterns
+
+| Pattern | File names | Meaning |
+|--------|------------|--------|
+| **All methods** | `route.ts`, `route.js`, `route.mts`, `route.mjs` | One file handles every method you export (`GET`, `POST`, etc.). |
+| **One method per file** | `get.ts`, `post.ts`, `get.route.ts`, `post.route.ts`, … | That file handles only that HTTP method. |
+
+Supported method names: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`.  
+Supported extensions: `.ts`, `.js`, `.mts`, `.mjs`.
+
+You can mix both: e.g. `router/api/users/route.ts` for GET and `router/api/users/post.route.ts` for POST. You **cannot** have two files that both handle the same method for the same path (e.g. two GET handlers for `/api/users`); the loader will throw a conflict error.
+
+**Example: single file for multiple methods** — Use `route.ts` when one path should handle GET and POST (or more) in the same file:
+
+```ts title="router/api/hello/route.ts"
+import type { Context } from "reion";
+
+export async function GET(ctx: Context) {
+  ctx.res.status(200).json({ message: "Hello" });
+}
+
+export async function POST(ctx: Context) {
+  ctx.res.status(201).json({ message: "Created" });
+}
+```
+
+`GET /api/hello` and `POST /api/hello` both use this file. The framework calls the export that matches the request method.
+
+**Example: one method per file** — Use `get.route.ts` and `post.route.ts` when you want to split handlers by method (e.g. for clearer validation per method):
+
+```ts title="router/api/users/get.route.ts"
+import type { Context } from "reion";
+
+export default async function GET(ctx: Context) {
+  ctx.res.status(200).json([]);
+}
+```
+
+```ts title="router/api/users/post.route.ts"
+import type { Context } from "reion";
+
+export default async function POST(ctx: Context) {
+  ctx.res.status(201).json({ id: "1" });
+}
+```
+
+Both files serve `/api/users`; the request method decides which file is loaded.
+
+### URL path from folder structure
+
+- **Static segments** — Folder name = path segment. `router/api/hello/route.ts` → `/api/hello`.
+- **Route groups** — Folders named `(name)` do **not** appear in the URL. `router/api/(user)/users/route.ts` → `/api/users`.
+- **Dynamic segments** — Folders named `[param]` become a single path parameter. `router/api/posts/[postId]/route.ts` → `/api/posts/:postId`; the value is in `ctx.params.postId`.
+- **Optional catch-all** — Folder `[[...param]]` matches the rest of the path (or nothing); the param receives the remainder as one string.
+
+**Example: static path** — The folder path is the URL path. The filename (`route.ts`) is not part of the URL.
+
+```ts title="router/api/hello/route.ts"
+import type { Context } from "reion";
+
+export default async function GET(ctx: Context) {
+  ctx.res.status(200).json({ hello: "world" });
+}
+```
+
+Serves **`GET /api/hello`**. No params or query required.
+
+**Example: dynamic segment** — Use a folder named `[paramName]` to capture one segment. The value is on `ctx.params`.
+
+```ts title="router/api/posts/[postId]/route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  params: { postId: "string" },
+};
+
+export default async function GET(ctx: Context) {
+  const postId = ctx.params.postId;
+  ctx.res.status(200).json({ id: postId, title: "Post " + postId });
+}
+```
+
+Serves **`GET /api/posts/123`** — `ctx.params.postId` is `"123"`. You can validate `params` in `SCHEMA` so invalid IDs return 400.
+
+**Example: route group** — A folder named `(groupName)` organizes files without adding to the URL.
+
+```
+router/api/(user)/users/route.ts   →  GET /api/users  (not /api/(user)/users)
+router/api/(user)/posts/route.ts   →  GET /api/posts
+```
+
+Use route groups to group related routes (e.g. all “user” APIs) without changing the public URL.
+
+**Example: optional catch-all** — A folder named `[[...param]]` matches zero or more path segments. The param gets the rest of the path as a single string.
+
+```ts title="router/api/[[...all]]/route.ts"
+import type { Context } from "reion";
+
+export default async function GET(ctx: Context) {
+  const path = ctx.params.all ?? "";
+  ctx.res.status(200).json({ caught: path });
+}
+```
+
+- **`GET /api`** → `ctx.params.all` is `""` or undefined.
+- **`GET /api/foo`** → `ctx.params.all` is `"foo"`.
+- **`GET /api/foo/bar/baz`** → `ctx.params.all` is `"foo/bar/baz"`.
+
+---
+
+## What you can export from a route file
+
+Each route file is loaded as a module. Reion looks for the following exports:
+
+### Handler (required)
+
+- **Named by method:** `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS` — the handler for that method.
+- **Default:** `export default` — used when the request method has no named export (e.g. for `route.ts` you typically export `export default async function GET(...)` or export both `GET` and `POST`).
+
+The handler receives one argument: the **context** `ctx` (see [Request context](#request-context)). You can use `async` handlers and return a Promise; the framework awaits the result and sends it as the response if you don't call `ctx.res.json()` yourself.
+
+### Request validation: `SCHEMA` and `METHOD_SCHEMA`
+
+- **`SCHEMA`** — A `RouteSchema` object applied to all methods in this file. Use it for shared validation (e.g. `params`, `query`) or a shared `body` shape.
+- **`GET_SCHEMA`**, **`POST_SCHEMA`**, etc. — Per-method overrides. Merged on top of `SCHEMA` for that method. Use when one method needs a different body or query shape.
+
+Schema keys: `body`, `params`, `query`. Each can be a **simple shape** (object of type strings) or a **Zod schema**. Body is only validated for `POST`, `PUT`, and `PATCH`.
+
+### Response typing: `RESPONSE_SCHEMA` and `METHOD_RESPONSE_SCHEMA`
+
+- **`RESPONSE_SCHEMA`** — Map of status code → body schema (e.g. `{ 200: { id: "string", name: "string" }, 201: { id: "string" } }`). Used for typed `ctx.res.status(code).json(data)` and for fast JSON serialization when possible.
+- **`GET_RESPONSE_SCHEMA`**, **`POST_RESPONSE_SCHEMA`**, etc. — Per-method response schemas. Used instead of `RESPONSE_SCHEMA` when present for that method.
+
+You can use `InferResponseBodies<typeof RESPONSE_SCHEMA>` and `Context<Res>` to get typed `res.json()` for each status code.
+
+---
+
+## Validation
+
+Validation runs **before** your handler (and before any middleware on the route). If validation fails, the request never reaches the handler; the framework returns **400** with a JSON body like `{ "error": "Validation failed", "details": ... }`.
+
+### When validation runs
+
+- **Body** — Validated only for `POST`, `PUT`, and `PATCH`. For other methods, `ctx.body` is not validated by the route schema.
+- **Params** — Always validated if you define `schema.params` (e.g. for dynamic segments like `[postId]`).
+- **Query** — Validated if you define `schema.query`.
+
+After validation passes, `ctx.body`, `ctx.params`, and `ctx.query` are **replaced** with the parsed/validated values (so you get correct types and coercion).
+
+### Schema formats
+
+You can define each of `body`, `params`, and `query` in two ways:
+
+**1. Simple shape (object of type strings)**
+
+- Type strings: `"string"`, `"number"`, `"boolean"`, `"object"`, `"array"`.
+- Optional: add `"?"` — e.g. `"string?"`, `"number?"`.
+- Nested objects are allowed.
+
+The framework coerces query and body values (e.g. `"10"` in query becomes `10` for `"number?"`). Invalid or missing required fields return **400** with error details.
+
+```ts title="router/api/users/get.route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  query: { limit: "number?", page: "number?" },
+};
+
+export default async function GET(ctx: Context) {
+  // ctx.query is validated and typed (e.g. limit?: number, page?: number after coercion)
+  ctx.res.status(200).json({ list: [], query: ctx.query });
+}
+```
+
+- **`GET /api/users`** — `ctx.query` is `{}`; `limit` and `page` are optional so the request is valid.
+- **`GET /api/users?limit=5&page=2`** — `ctx.query` has `limit: 5`, `page: 2` (coerced to numbers).
+- **`GET /api/users?limit=abc`** — Validation fails; response is **400** with details.
+
+```ts title="router/api/users/post.route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  body: { name: "string", email: "string" },
+};
+
+export default async function POST(ctx: Context) {
+  // ctx.body is validated; use as typed object
+  const body = ctx.body as { name: string; email: string };
+  ctx.res.status(201).json({ id: "1", ...body });
+}
+```
+
+- The client must send JSON like `{ "name": "Ada", "email": "a@b.com" }`. Missing or wrong types (e.g. `name: 123`) cause **400** before the handler runs.
+- After validation, `ctx.body` is the parsed object; you can safely use it in your response.
+
+**2. Zod schema**
+
+For complex validation (refinements, transforms, custom messages), use Zod. Export it as `body`, `params`, or `query`:
+
+```ts title="router/api/items/route.ts"
+import type { Context, RouteSchema } from "reion";
+import { z } from "reion";
+
+const bodySchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const SCHEMA: RouteSchema = {
+  body: bodySchema,
+};
+
+export default async function POST(ctx: Context) {
+  const body = ctx.body as z.infer<typeof bodySchema>;
+  ctx.res.status(201).json(body);
+}
+```
+
+Use Zod when you need `.min(1)`, `.email()`, `.refine()`, or custom error messages. The framework converts the Zod schema internally for validation; on success, `ctx.body` (or `params`/`query`) holds the parsed value.
+
+### Per-method schema override
+
+Use `GET_SCHEMA`, `POST_SCHEMA`, etc. to override or add validation for a single method:
+
+```ts title="router/api/users/route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  query: { limit: "number?", page: "number?" },
+};
+
+export const POST_SCHEMA: RouteSchema = {
+  body: { name: "string", email: "string" },
+};
+
+export default async function GET(ctx: Context) {
+  ctx.res.status(200).json([]);
+}
+
+// POST handler: gets SCHEMA merged with POST_SCHEMA (query + body)
+export async function POST(ctx: Context) {
+  const body = ctx.body as { name: string; email: string };
+  ctx.res.status(201).json(body);
+}
+```
+
+- **GET** uses only `SCHEMA` (query validation). **POST** uses `SCHEMA` + `POST_SCHEMA`, so it gets both `query` and `body` validation.
+- Method-specific schema overrides only the keys you set (e.g. `POST_SCHEMA.body`); other keys (e.g. `query`) still come from `SCHEMA`.
+
+### Manual body validation
+
+If you prefer to validate inside the handler, use the exported helper:
+
+```ts
+import { validateBody } from "reion";
+
+export default async function POST(ctx: Context) {
+  const body = validateBody(ctx, (raw) => myZodSchema.parse(raw));
+  // body is typed; parse() throws on failure (error handler can return 400)
+}
+```
+
+---
+
+## Response schemas
+
+Response schemas define the **shape** of JSON bodies per status code. They are used for:
+
+- **Typed `res.json()`** — When you use `Context<InferResponseBodies<typeof RESPONSE_SCHEMA>>`, `ctx.res.status(200).json(data)` is type-checked for that status.
+- **Serialization** — When a response schema is available for the status code, Reion can use fast serialization for that shape.
+
+Define them as a map from status code to simple shape or Zod schema:
+
+```ts title="router/api/users/get.route.ts"
+import type { Context, RouteSchema, ResponseSchemaMap, InferResponseBodies } from "reion";
+
+export const SCHEMA: RouteSchema = { query: { limit: "number?" } };
+
+export const GET_RESPONSE_SCHEMA: ResponseSchemaMap = {
+  200: { id: "string", name: "string", email: "string" },
+};
+
+type Res = InferResponseBodies<typeof GET_RESPONSE_SCHEMA>;
+
+export default async function GET(ctx: Context<Res>) {
+  ctx.res.status(200).json({ id: "1", name: "Ada", email: "a@b.com" });
+}
+```
+
+- `GET_RESPONSE_SCHEMA` tells Reion the shape of the 200 response. With `Context<Res>`, TypeScript checks that the object you pass to `.json()` matches that shape.
+- You can define multiple status codes (e.g. `200`, `201`, `404`) so each `ctx.res.status(code).json(...)` is typed.
+
+You can validate a response body yourself with `validateResponseBody(schema, data)` (returns `{ ok: true }` or `{ ok: false, details }`).
+
+---
+
+## Request context
+
+The handler receives a single argument: **`ctx`** (the request context). It contains:
+
+| Property | Description |
+|----------|-------------|
+| **`ctx.req`** | Raw Node.js `IncomingMessage`. |
+| **`ctx.res`** | Response helper: `status(code)`, `json(data)`, `send(body)`, `text(body)`, `html(body)`, `redirect(url, code?)`, `stream(readable)`, `setHeader(name, value)`. |
+| **`ctx.params`** | Path parameters (e.g. `ctx.params.postId` for `[postId]`). After validation, types match your schema. |
+| **`ctx.query`** | Query string parsed into an object. After validation, types match your schema. |
+| **`ctx.body`** | Parsed request body (JSON etc.). For POST/PUT/PATCH, after validation, types match your schema. |
+| **`ctx.user`** | Set by auth middleware (e.g. after verifying a token). |
+| **`ctx.state`** | Mutable object for passing data between middleware and the handler. |
+| **`ctx.emit`** | Emit events: `ctx.emit('event.name', payload)`. |
+| **`ctx.logger`** | Request-scoped logger (includes trace id). |
+| **`ctx.trace`** | `{ traceId }` for request correlation. |
+
+### Sending a response
+
+- **Return value** — You can `return { json: data }` or `return { status: 201, json: data }`; the framework will send it if the response is not already sent.
+- **Direct send** — Call `ctx.res.status(200).json(data)` (or `.send()`, `.text()`, `.html()`, `.redirect()`). Once sent, further writes are no-ops.
+
+**Example: using params, query, and res** — A single handler that uses path params, query, and different response methods:
+
+```ts title="router/api/posts/[postId]/route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  params: { postId: "string" },
+  query: { format: "string?" },
+};
+
+export default async function GET(ctx: Context) {
+  const postId = ctx.params.postId;
+  const format = ctx.query.format;
+
+  if (format === "html") {
+    ctx.res.setHeader("X-Post-Id", postId);
+    ctx.res.status(200).html(`<h1>Post ${postId}</h1>`);
+    return;
+  }
+
+  ctx.res.status(200).json({ id: postId, title: "Post " + postId });
+}
+```
+
+- **`GET /api/posts/42`** — `ctx.params.postId` is `"42"`; response is JSON.
+- **`GET /api/posts/42?format=html`** — same params/query; response is HTML and a custom header. This shows how you can branch on `ctx.query` and use `res.html()` or `res.json()`.
+
+---
+
+## Full example
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="router">
+      <Folder name="api">
+        <Folder name="users">
+          <File name="get.route.ts" />
+          <File name="post.route.ts" />
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+**GET** — List with optional query:
+
+```ts title="router/api/users/get.route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  query: { limit: "number?", page: "number?" },
+};
+
+export default async function GET(ctx: Context) {
+  const { limit, page } = ctx.query;
+  ctx.res.status(200).json({
+    list: [],
+    pagination: { limit: limit ?? 10, page: page ?? 1 },
+  });
+}
+```
+
+**POST** — Create with body validation and event:
+
+```ts title="router/api/users/post.route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  body: { name: "string", email: "string" },
+};
+
+export default async function POST(ctx: Context) {
+  const body = ctx.body as { name: string; email: string };
+  const user = { id: "1", ...body };
+
+  ctx.emit("user.created.email", user);
+
+  ctx.res.status(201).json(user);
+}
+```
+
+Together these two files implement a minimal **list** (GET with optional pagination) and **create** (POST with required body and an event). The `<Files>` tree above shows where they live; the URL is always `/api/users` and the HTTP method selects the handler.
+
+---
+
+## Summary
+
+| Topic | Detail |
+|-------|--------|
+| **File names** | `route.ts` (all methods) or `get.ts` / `post.route.ts` (one method). |
+| **Exports** | Handler: `GET` / `POST` / … or `default`. Validation: `SCHEMA`, `GET_SCHEMA`, … Response: `RESPONSE_SCHEMA`, `GET_RESPONSE_SCHEMA`, … |
+| **Validation** | `body` (POST/PUT/PATCH), `params`, `query`. Simple shapes or Zod. Runs before handler; 400 on failure. |
+| **Response** | `RESPONSE_SCHEMA` / `METHOD_RESPONSE_SCHEMA` for typing and serialization. |
+| **Context** | `req`, `res`, `params`, `query`, `body`, `user`, `state`, `emit`, `schedule`, `logger`, `trace`. |
+
+For folder structure and URL mapping, see [Folder Structure](/docs/development-guide/folder-structure). For middleware, see the middleware docs.

@@ -1,0 +1,22 @@
+---
+icon: FileBraces
+title: Body
+description: Request body parsing (`ctx.body`) and body validation via `SCHEMA`.
+---
+
+# Body
+
+`ctx.body` contains the parsed request body for non-`GET`/`HEAD` requests.
+
+## Parsing
+
+Reion parses the incoming body (for example, JSON) and sets `ctx.body` before middleware/handler execution.
+
+## Validation with `SCHEMA`
+
+If you define `SCHEMA.body` in your route file:
+
+- Reion validates `ctx.body` before the handler runs
+- on success, `ctx.body` is replaced with the validated/coerced value
+- on failure, Reion returns a `400` with validation error details
+

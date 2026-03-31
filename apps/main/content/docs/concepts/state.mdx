@@ -1,0 +1,25 @@
+---
+icon: Container
+title: State
+description: How `ctx.state` works as mutable per-request storage.
+---
+
+# State
+
+`ctx.state` is a plain mutable object for passing data between middleware and route handlers.
+
+## Typical usage
+
+Auth middleware might set:
+
+- `ctx.state.userId`
+- `ctx.state.permissions`
+
+Then the route handler reads it:
+
+- `const userId = ctx.state.userId`
+
+## Notes
+
+Because Reion can optionally reuse context objects (context pooling), treat `ctx.state` as request-scoped and write fresh values per request.
+

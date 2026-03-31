@@ -1,0 +1,79 @@
+---
+icon: CalendarClock
+title: Cron Plugin
+description: Use @reion/cron to run scheduled tasks from appDir/cron and trigger jobs with ctx.schedule().
+---
+
+# Cron Plugin
+
+Cron is provided by the **`@reion/cron`** plugin.
+
+Install and register it in `reion.config.ts`:
+
+```ts title="reion.config.ts"
+import { createCronPlugin } from "@reion/cron";
+
+export default {
+  plugins: [createCronPlugin()],
+};
+```
+
+You can disable scheduler execution in dev mode:
+
+```ts title="reion.config.ts"
+plugins: [createCronPlugin({ disableDevCron: true })];
+```
+
+---
+
+## Where cron jobs live
+
+- **Directory:** `appDir/cron/`
+- **File names:** `*.cron.ts`, `*.cron.js`, `*.cron.mts`, `*.cron.mjs`
+
+Each file defines one task. Task names are derived from filename (camelCase -> dot.case):
+
+| File name | Task name |
+|-----------|-----------|
+| `cleanup.cron.ts` | `cleanup` |
+| `intervalExample.cron.ts` | `interval.example` |
+| `reportDaily.cron.ts` | `report.daily` |
+
+---
+
+## Cron file exports
+
+Each cron file exports:
+
+1. `schedule` — `ScheduleDef` or `ScheduleDef[]`
+2. `run` — `(ctx: TaskContext) => void | Promise<void>`
+
+```ts title="appDir/cron/cleanup.cron.ts"
+import type { ScheduleDef, TaskContext } from "@reion/cron";
+
+export const schedule: ScheduleDef = { every: "day", at: "00:00" };
+
+export async function run(ctx: TaskContext) {
+  console.log("cleanup", ctx.payload);
+}
+```
+
+---
+
+## Trigger manually from routes
+
+When the plugin is enabled, `ctx.schedule(name, payload, options?)` is available:
+
+```ts title="appDir/router/admin/report/route.ts"
+export async function POST(ctx) {
+  await ctx.schedule("report.daily", { triggeredBy: "admin" });
+  ctx.res.status(202).json({ ok: true });
+}
+```
+
+Use `delayMs` or `at` for delayed invocation:
+
+```ts
+await ctx.schedule("report.daily", { source: "api" }, { delayMs: 2000 });
+```
+

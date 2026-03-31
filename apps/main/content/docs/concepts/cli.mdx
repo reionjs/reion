@@ -1,0 +1,40 @@
+---
+icon: SquareTerminal
+title: CLI
+description: "Reion command line interface: dev, build, and start."
+---
+
+# CLI
+
+Reion provides three main commands:
+
+## `reion dev`
+
+Runs your app with hot reload. It watches:
+
+- route files (`route.*` or `get/post/put/...*.route.*`)
+- `middleware.*`
+- event files (`*.event.*`) under `events/`
+
+## `reion build`
+
+Compiles TypeScript sources into the build output directory (default `./dist`).
+
+## `reion start`
+
+Starts the built app (no hot reload).
+
+## Common options
+
+- `-p, --port <number>`: server port (default from config or `3000`)
+- `-H, --host <string>`: server host (default `127.0.0.1`)
+- `--appDir <path>`: app directory root (overrides `reion.config.ts`)
+- `--build-path <path>`: output dir for `build` / `start` (default `./dist`)
+
+## Plugin command hooks
+
+If you configure `plugins` in `reion.config.ts`, plugins can also react to CLI lifecycle via hooks like:
+
+- `onDevStart`, `onDevFileChange`, `onDevRestart`, `onDevStop`
+- `onBuildStart`, `onBuildComplete`, `onBuildError`
+- `onStartStart`, `onStartListening`, `onStartStop`, `onStartError`

@@ -1,0 +1,156 @@
+---
+icon: Bell
+title: Events
+description: Event handlers in app/events, file naming, event name from filename, emitting from routes, and EventContext.
+---
+
+# Events
+
+Reion's event bus lets you run logic **after** something happens (e.g. “user created”) without blocking the request. Handlers are registered from files in **`appDir/events/`** and invoked when you call **`ctx.emit(name, payload)`** from a route (or elsewhere). This guide covers file naming, how event names are derived, and how to emit and handle events.
+
+---
+
+## Where events live
+
+- **Directory:** **`appDir/events/`** is scanned **recursively** so you can group handlers in subfolders (e.g. `events/user/…`, `events/billing/…`).
+- **File names:** `*.event.ts`, `*.event.js`, `*.event.mts`, `*.event.mjs`, or plain `*.ts` / `*.js` / `*.mts` / `*.mjs` in `events/`.
+
+Each file defines **one** handler. The **event name** is built from the path under `events/`: each folder name and the file’s base name (without extension) are turned from **camelCase → dot.case**, then joined with dots.
+
+| Relative path under `events/` | Event name |
+|--------------------------------|------------|
+| `userCreatedEmail.event.ts` | `user.created.email` |
+| `orderShipped.event.ts` | `order.shipped` |
+| `billing/invoicePaid.event.ts` | `billing.invoice.paid` |
+| `user/UserCreatedEmail.event.ts` | `user.user.created.email` |
+| `user/createdEmail.ts` | `user.created.email` (group files under `user/` without duplicating `user` in the basename) |
+
+<Files>
+  <Folder name="app" defaultOpen>
+    <Folder name="events">
+      <File name="userCreatedEmail.event.ts" />
+      <Folder name="billing">
+        <File name="invoicePaid.event.ts" />
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+---
+
+## What to export
+
+Each event file must export a **default function** that receives a single **`ctx: EventContext`**:
+
+- **`ctx.payload`** — The value you passed to `ctx.emit(name, payload)` (or `emit(name, payload)`).
+- **`ctx.emit(name, payload?)`** — Emit another event while keeping the same **`traceId`** and **`logger`** (event-to-event chaining).
+- **`ctx.traceId`** — The request trace id when the event was emitted from a route; empty when emitted outside a request.
+- **`ctx.logger`** — Logger with `eventName` in bindings so logs from the handler correlate with the event (and request, when applicable).
+- **`ctx.eventName`** — The event name (e.g. `"user.created.email"`).
+
+Handlers can be sync or async. They are invoked with `void handler(ctx)` (fire-and-forget); the framework does not await them, so long-running work should be scheduled or queued if you need reliability.
+
+---
+
+## Emitting events
+
+From a **route**, use **`ctx.emit(name, payload)`**. The framework passes the current request's trace id and logger into the event context so you can correlate logs.
+
+```ts title="router/api/users/post.route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  body: { name: "string", email: "string" },
+};
+
+export default async function POST(ctx: Context) {
+  const body = ctx.body as { name: string; email: string };
+  const user = { id: "1", ...body };
+
+  ctx.emit("user.created.email", user);
+
+  ctx.res.status(201).json(user);
+}
+```
+
+- **`ctx.emit("user.created.email", user)`** — Invokes every handler registered for `user.created.email` (e.g. from `appDir/events/userCreatedEmail.event.ts`). The handler receives **`ctx`** with `ctx.payload === user`, plus `traceId` and logger from the request.
+
+You can also get the event bus from the runtime and call `emit` outside a request; in that case `traceId` will be empty and the logger will still include `eventName`.
+
+---
+
+## Full example: welcome email on user create
+
+**Route** — creates a user and emits an event:
+
+```ts title="router/api/users/post.route.ts"
+import type { Context, RouteSchema } from "reion";
+
+export const SCHEMA: RouteSchema = {
+  body: { name: "string", email: "string" },
+};
+
+export default async function POST(ctx: Context) {
+  const body = ctx.body as { name: string; email: string };
+  const user = { id: "1", ...body };
+
+  ctx.emit("user.created.email", user);
+
+  ctx.res.status(201).json(user);
+}
+```
+
+**Event handler** — registered for `user.created.email` (from filename `userCreatedEmail.event.ts`):
+
+```ts title="appDir/events/userCreatedEmail.event.ts"
+import type { EventContext } from "reion";
+
+export default async function userCreatedEmail(ctx: EventContext) {
+  const user = ctx.payload as { id: string; name: string; email: string };
+  ctx.logger.info({ userId: user.id, event: ctx.eventName }, "sending welcome email");
+  // In a real app: send email, enqueue job, etc.
+}
+```
+
+- When a client POSTs to create a user, the route responds immediately with 201. The handler runs asynchronously and can log (with `traceId` when emitted from the request), send an email, or enqueue work.
+- Multiple files can register for the same event name (e.g. two handlers for `user.created.email`); all are invoked when you emit.
+
+### Chaining events from a handler
+
+Handlers do not call other handler files directly. Use **`ctx.emit("other.event.name", data)`** so the next handler runs on the same trace and logger:
+
+```ts title="appDir/events/userCreated.event.ts"
+import type { EventContext } from "reion";
+
+export default async function userCreated(ctx: EventContext) {
+  ctx.logger.info("user created");
+  ctx.emit("user.created.email", ctx.payload);
+}
+```
+
+---
+
+## Event name from path
+
+For each path segment (folder or file basename), the conversion is **camelCase → dot.case**: each capital letter (except the first) starts a new segment, lowercased. Segments are joined with `.`.
+
+- `userCreatedEmail` → `user.created.email`
+- `orderShipped` → `order.shipped`
+- `HTTPRequest` → `h.t.t.p.request` (edge case; prefer `httpRequest` → `http.request`)
+
+Name folders and files so the **full** derived name matches what you emit. Example: `events/billing/invoicePaid.event.ts` → `ctx.emit("billing.invoice.paid", payload)`.
+
+---
+
+## Summary
+
+| Topic | Detail |
+|-------|--------|
+| **Location** | `appDir/events/`, all nested subfolders. |
+| **File names** | `*.event.ts` (or `.js`, `.mts`, `.mjs`). |
+| **Event name** | From filename: camelCase → dot.case (e.g. `userCreatedEmail` → `user.created.email`). |
+| **Export** | Default function `(ctx: EventContext) => void \| Promise&lt;void&gt;`. |
+| **Emit** | From routes: `ctx.emit("event.name", payload)`. Context gets request `traceId` and logger. |
+| **EventContext** | `payload`, `emit`, `traceId`, `logger`, `eventName`. |
+
+For emitting from routes, see [Routes](/docs/development-guide/routes). For scheduled logic, see [Cron Plugin](/docs/plugins/cron).

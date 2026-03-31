@@ -1,0 +1,237 @@
+---
+icon: Rocket
+title: Get Started
+description: Set up Reion, create a project, and run your first API in minutes.
+---
+
+# Get Started
+
+This guide walks you through installing Reion, creating a new project, and running your first API.
+
+---
+
+## Prerequisites
+
+- **Node.js** 18+ or **Bun** 1.0+
+- **TypeScript** (recommended)
+- A terminal and editor
+
+---
+
+## Setup
+
+### Create a new project
+
+```bash
+npx reion create my-project
+```
+
+### Add to an existing project
+
+<Tabs items={['Bun', 'npm']}>
+  <Tab value="Bun">
+
+```bash
+bun add reion
+```
+
+  </Tab>
+  <Tab value="npm">
+
+```bash
+npm install reion
+```
+
+  </Tab>
+</Tabs>
+
+Then add an `appDir` (default `./src`) directory with a `router/` folder for routes and middleware (routes from `appDir/router/**`, middleware from `appDir/router/**/middleware.ts`).
+
+---
+
+## Project structure
+
+A minimal Reion project looks like this:
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="router">
+      <File name="route.ts" />
+      <Folder name="api">
+        <Folder name="hello">
+          <File name="route.ts" />
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+  <File name="reion.config.ts" />
+  <File name="package.json" />
+</Files>
+
+- **`router/`** — Route files and `router/**/middleware.ts` live here. File paths map to URL paths.
+- **`reion.config.ts`** — Optional: port, host, CORS, logging, and plugins.
+
+---
+
+## Your first route
+
+Create `src/router/route.ts`:
+
+```ts title="src/router/route.ts"
+import type { Context } from "reion";
+
+export async function GET(ctx: Context) {
+  ctx.res.status(200);
+  return { message: "hello test" };
+}
+```
+
+This handles `GET /` and returns JSON.
+
+Add another route at `src/router/api/hello/route.ts`:
+
+```ts title="src/router/api/hello/route.ts"
+import type { Context } from "reion";
+
+export async function GET(ctx: Context) {
+  ctx.res.status(200);
+  return { hello: "world" };
+}
+```
+
+This handles `GET /api/hello`.
+
+---
+
+## Run the dev server
+
+From the project root:
+
+<Tabs items={['Bun', 'npm', 'CLI']}>
+  <Tab value="Bun">
+
+```bash
+bun run dev
+```
+
+  </Tab>
+  <Tab value="npm">
+
+```bash
+npm run dev
+```
+
+  </Tab>
+  <Tab value="CLI">
+
+```bash
+reion dev
+```
+
+  </Tab>
+</Tabs>
+
+By default the server runs at **http://localhost:3000**.
+
+- Open http://localhost:3000 — you should see `{"message":"Hello from Reion!"}`.
+- Open http://localhost:3000/api/hello — you should see `{"hello":"world"}`.
+
+Use `-p` to change the port and `-H` to change the host:
+
+```bash
+reion dev -p 4000 -H 0.0.0.0
+```
+
+---
+
+## Add Validation
+
+### with Reion
+
+Validate the request body and get type-safe input:
+
+```ts title="src/router/api/users/route.ts"
+import type { Context, RouteSchema } from "reion";
+import { z } from "zod";
+
+export const SCHEMA: RouteSchema = {
+  body: { name: "string", email: "string", age: "number?" },
+};
+
+export default async function POST(ctx: Context) {
+  const body = ctx.body;
+  const user = { id: "1", ...body };
+
+  ctx.emit("user.created.email", user);
+
+  ctx.res.status(201).json(user);
+}
+```
+
+
+### with Zod
+
+```ts title="src/router/api/users/route.ts"
+import type { Context, RouteSchema } from "reion";
+import { z } from "zod";
+
+export const SCHEMA: RouteSchema = {
+  body: z.object({
+    name: z.string(),
+    email: z.string(),
+    age: z.number().optional(),
+  }),
+};
+
+export default async function POST(ctx: Context) {
+  const body = ctx.body;
+  const user = { id: "1", ...body };
+
+  ctx.emit("user.created.email", user);
+
+  ctx.res.status(201).json(user);
+}
+```
+
+Invalid bodies are rejected with a 400 and validation errors.
+
+---
+
+## Build for production
+
+<Tabs items={['CLI', 'package.json']}>
+  <Tab value="CLI">
+
+```bash
+reion build
+reion start
+```
+
+  </Tab>
+  <Tab value="package.json">
+
+Add scripts to `package.json`:
+
+```json title="package.json"
+{
+  "scripts": {
+    "dev": "reion dev",
+    "build": "reion build",
+    "start": "reion start"
+  }
+}
+```
+
+  </Tab>
+</Tabs>
+
+---
+
+## Next steps
+
+- **Routing** — File-based routes, dynamic segments, and method handlers.
+- **Middleware** — CORS, logging, and custom middleware order.
+- **Validation** — Request/response schemas and error handling.
+- **CLI reference** — All `reion dev`, `build`, and `start` options.
+
+Use the sidebar or search (⌘K) to find these topics.

@@ -1,0 +1,35 @@
+---
+icon: Activity
+title: Tracing
+description: "Request tracing in Reion: trace id per request, tracer/traceStart callbacks, and correlating logs."
+---
+
+# Tracing
+
+Reion can attach a **trace id** to every request so logs and spans can be correlated.
+
+## Trace id and logger
+
+For each incoming request, Reion creates:
+
+- `ctx.trace.traceId`: the request trace id
+- `ctx.logger`: a request-scoped logger that includes the trace id in bindings
+
+So you can safely use `ctx.logger.info(...)` inside routes and middleware.
+
+## Enabling / disabling
+
+Tracing is controlled by:
+
+- `tracing: false` in `reion.config.ts`
+- `REION_SKIP_TRACING=1` (or `true`) environment variable
+
+## Tracer hooks
+
+If you configure these in `reion.config.ts`, Reion will call them around the request execution:
+
+- `traceStart`: called when the request span starts
+- `tracer`: called when the request span ends (with method, pathname, status, response size, etc.)
+
+The default implementation logs a `[datetime][traceId] method pathname` line at start and end.
+

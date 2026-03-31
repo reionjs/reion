@@ -1,0 +1,230 @@
+---
+icon: Microchip
+title: Middleware
+description: Middleware file conventions, path prefix, order, exports (default and per-method), next() and error handling.
+---
+
+# Middleware
+
+Middleware runs **before** your route handler for matching request paths. Use it for logging, auth, rate limiting, or any logic that should run for a set of routes. This guide covers file naming, where to place middleware, execution order, and how to export and use it.
+
+---
+
+## File naming and placement
+
+- **File names:** `middleware.ts`, `middleware.js`, `middleware.mts`, `middleware.mjs`
+- **Placement:** Only under **`router/**`** (i.e. `router/**/middleware.ts`). The **folder path** (relative to `router/`) is the **path prefix\*\* for which the middleware runs.
+
+Middleware in a folder applies to that path and **all subpaths**. For example, `router/api/middleware.ts` runs for every request whose path starts with `/api` (e.g. `/api/hello`, `/api/users`, `/api/users/123`). Middleware in `router/middleware.ts` runs for every request (prefix is the root).
+
+---
+
+## Path prefix and order
+
+Reion collects middleware by matching the **request path** (the route pathname, including route groups like `(user)`). It builds a list of path prefixes from the request and loads middleware files whose prefix exactly matches one of them, in **ancestor-first** order.
+
+**Example:** For a request to `GET /api/users` (route might live at `router/api/(user)/users/route.ts`), the pathname used for middleware is the route's path (e.g. `/api/(user)/users`). The prefixes are:
+
+1. `""` (root)
+2. `api`
+3. `api/(user)`
+4. `api/(user)/users`
+
+So middleware from **root** runs first, then **api**, then **api/(user)**, then **api/(user)/users**. That way you can have global middleware in `router/middleware.ts`, API-wide middleware in `router/api/middleware.ts`, and route-group middleware in `router/api/(user)/middleware.ts`.
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="router">
+      <File name="middleware.ts" />
+      <Folder name="api">
+        <File name="middleware.ts" />
+        <Folder name="(user)">
+          <File name="middleware.ts" />
+          <Folder name="users">
+            <File name="get.route.ts" />
+          </Folder>
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+- **`router/middleware.ts`** — prefix `""` → runs for every request.
+- **`router/api/middleware.ts`** — prefix `api` → runs for `/api/*`.
+- **`router/api/(user)/middleware.ts`** — prefix `api/(user)` → runs for routes under the `(user)` group (e.g. `/api/users`, `/api/posts`).
+
+---
+
+## What to export
+
+Each middleware file is loaded as a module. Reion looks for:
+
+### `default` — run for all methods
+
+Export an **array of middleware functions** as `default`. These run for every HTTP method on matching paths.
+
+```ts title="router/api/middleware.ts"
+import type { Context, Next } from "reion";
+
+function rateLimit(ctx: Context, next: Next) {
+  ctx.logger.info("[middleware] rateLimit");
+  return next();
+}
+
+function requestId(ctx: Context, next: Next) {
+  ctx.state.requestId = crypto.randomUUID();
+  return next();
+}
+
+const middleware = [requestId, rateLimit];
+export default middleware;
+```
+
+- Each function receives **`ctx`** (the request context) and **`next`**. Call **`next()`** to continue to the next middleware or the route handler. You can `return next()` or `await next()`.
+- Order in the array is the order they run: `requestId` runs first, then `rateLimit`, then the route handler.
+
+### Per-method middleware (optional)
+
+Export **`GET_middleware`**, **`POST_middleware`**, etc. to run extra middleware only for that HTTP method. They are appended after the default middleware for that request.
+
+```ts title="router/api/middleware.ts"
+import type { Context, Next } from "reion";
+
+function forAllMethods(ctx: Context, next: Next) {
+  ctx.logger.info("[middleware] for all methods");
+  return next();
+}
+
+function getOnly(ctx: Context, next: Next) {
+  ctx.logger.info("[middleware] GET only");
+  return next();
+}
+
+const middleware = [forAllMethods];
+export default middleware;
+
+// Only runs for GET requests to /api/*
+export const GET_middleware = [getOnly];
+```
+
+For a `GET /api/hello` request, the order is: `forAllMethods` → `getOnly` → route handler. For `POST /api/hello`, only `forAllMethods` runs before the handler.
+
+---
+
+## Using `next()` and passing errors
+
+- **Continue the chain:** Call `next()` (or `await next()`) to run the next middleware or the route handler. If you don't call `next()`, the request is left open unless you send a response yourself (e.g. `ctx.res.status(401).json({ error: "Unauthorized" })`).
+- **Pass an error to the error handler:** Call **`next(err)`** with any value. The framework throws a `NextError` and the request handler catches it and passes the error to your **error handler** (e.g. in `reion.config.ts`). Use this for auth failures or validation errors in middleware.
+
+**Example: auth middleware that short-circuits or passes an error**
+
+```ts title="router/api/(user)/middleware.ts"
+import type { Context, Next } from "reion";
+
+function requireAuth(ctx: Context, next: Next) {
+  const token = ctx.req.headers["authorization"];
+  if (!token || !token.startsWith("Bearer ")) {
+    ctx.res
+      .status(401)
+      .json({ error: "Missing or invalid Authorization header" });
+    return;
+  }
+  // Optionally verify token and set ctx.user, then continue
+  ctx.user = { id: "1", role: "user" };
+  return next();
+}
+
+// Or pass error to global error handler:
+function requireAuthWithNextError(ctx: Context, next: Next) {
+  const token = ctx.req.headers["authorization"];
+  if (!token) {
+    return next(new Error("Unauthorized"));
+  }
+  ctx.user = { id: "1" };
+  return next();
+}
+
+const middleware = [requireAuth];
+export default middleware;
+```
+
+- In the first version, the middleware sends the response and does not call `next()`, so the route handler is never run.
+- In the second version, `next(new Error("Unauthorized"))` triggers the framework's error handling; your `errorHandler` in config can return a 401 JSON response.
+
+---
+
+## Full example: logging and auth
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="router">
+      <Folder name="api">
+        <File name="middleware.ts" />
+        <Folder name="(user)">
+          <File name="middleware.ts" />
+          <Folder name="users">
+            <File name="get.route.ts" />
+          </Folder>
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+**Global API logging** — runs for all `/api/*` requests:
+
+```ts title="router/api/middleware.ts"
+import type { Context, Next } from "reion";
+
+function logRequest(ctx: Context, next: Next) {
+  const start = Date.now();
+  return next().then(() => {
+    ctx.logger.info({ durationMs: Date.now() - start }, "request completed");
+  });
+}
+
+export default [logRequest];
+```
+
+**Auth for “user” routes** — runs only for routes under `router/api/(user)/` (e.g. `/api/users`):
+
+```ts title="router/api/(user)/middleware.ts"
+import type { Context, Next } from "reion";
+
+function requireUser(ctx: Context, next: Next) {
+  if (!ctx.user) {
+    ctx.res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  return next();
+}
+
+const middleware = [requireUser];
+export default middleware;
+```
+
+**Route** — only runs after both middleware pass (and validation, if any):
+
+```ts title="router/api/(user)/users/get.route.ts"
+import type { Context } from "reion";
+
+export default async function GET(ctx: Context) {
+  ctx.res.status(200).json({ list: [], user: ctx.user });
+}
+```
+
+For `GET /api/users`, the order is: `router/api/middleware.ts` (logRequest) → `router/api/(user)/middleware.ts` (requireUser) → route handler. If `requireUser` doesn't call `next()`, the route never runs.
+
+---
+
+## Summary
+
+| Topic           | Detail                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **File names**  | `middleware.ts` (or `.js`, `.mts`, `.mjs`) under `router/` (i.e. `{appDir}/router/**`).                                  |
+| **Path prefix** | The folder path relative to `appDir/router/` (e.g. `api`, `api/(user)`). Middleware runs for that path and all subpaths. |
+| **Order**       | Ancestor-first: root → … → exact path. Same order as the path segments.                                                  |
+| **Exports**     | `default`: array of `(ctx, next) => void \| Promise&lt;void&gt;`. Optional: `GET_middleware`, `POST_middleware`, etc.    |
+| **next()**      | Call `next()` to continue; call `next(err)` to pass an error to the error handler.                                       |
+
+For route structure and path conventions, see [Folder Structure](/docs/development-guide/folder-structure). For routes and validation, see [Routes](/docs/development-guide/routes).

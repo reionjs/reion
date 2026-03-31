@@ -1,0 +1,47 @@
+---
+icon: FileBracesCorner
+title: Schema
+description: Route validation schemas (`SCHEMA`, `GET_SCHEMA`...) and response schemas (`RESPONSE_SCHEMA`, `GET_RESPONSE_SCHEMA`...).
+---
+
+# Schema
+
+Reion supports request validation and response typing via schemas exported from route files.
+
+## Request validation
+
+Export a `SCHEMA` object from your route file to validate:
+
+- `body`
+- `params`
+- `query`
+
+You can also export per-method overrides:
+
+- `GET_SCHEMA`
+- `POST_SCHEMA`
+- `PUT_SCHEMA`, `PATCH_SCHEMA`, `DELETE_SCHEMA`, etc.
+
+If validation fails, Reion returns **400** and your handler does not run.
+
+## Response typing
+
+Export a `RESPONSE_SCHEMA` map:
+
+```ts
+export const RESPONSE_SCHEMA = {
+  200: { /* body shape */ },
+  404: { /* body shape */ },
+} as const;
+```
+
+You can also export per-method response schemas like:
+
+- `GET_RESPONSE_SCHEMA`
+- `POST_RESPONSE_SCHEMA`
+
+When Reion has a response schema for the status code you set, it can:
+
+- type `ctx.res.status(code).json(data)`
+- use fast JSON serialization for that body shape when possible
+

@@ -1,0 +1,30 @@
+---
+icon: ArrowRightLeft
+title: Response
+description: The response helper API (`ctx.res`) and response schema typing for fast JSON serialization.
+---
+
+# Response
+
+Use `ctx.res` to send responses directly, or return a value from your route and let Reion send it.
+
+## `ctx.res` API
+
+- `ctx.res.status(code)`: sets the HTTP status and returns a chain with:
+  - `.json(data)`
+  - `.send(body)`
+  - `.text(body)`
+  - `.html(body)`
+- `ctx.res.setHeader(name, value)`: set response headers
+- `ctx.res.stream(readable)`: stream a readable response body
+- `ctx.res.redirect(url, status?)`: redirect
+- `ctx.res.sent`: `true` if the response was already sent (so further writes are no-ops)
+
+{/* ## Typed JSON responses
+
+If you define `RESPONSE_SCHEMA` (or `GET_RESPONSE_SCHEMA`, etc.) in your route file, Reion can type `ctx.res.status(code).json(data)` and use fast serialization for that shape.
+
+In handlers, you can also rely on:
+
+- `Context<Res>` generic typing (based on your `InferResponseBodies<typeof RESPONSE_SCHEMA>`) */}
+

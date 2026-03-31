@@ -1,0 +1,17 @@
+{
+  "name": "basic",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "reion dev",
+    "build": "reion build",
+    "start": "reion start"
+  },
+  "dependencies": {
+    "reion": "^0.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

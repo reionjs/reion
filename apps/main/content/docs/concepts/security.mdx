@@ -1,0 +1,53 @@
+---
+icon: Shield
+title: Security
+description: Built-in security options for rate limiting, headers, request size, IP filtering, CSRF, and timeouts.
+---
+
+# Security
+
+Reion supports a hybrid security model:
+
+- configure globally in `reion.config.ts` via `security`
+- compose feature middleware manually via `security.*` helpers
+
+## Global config
+
+```ts title="reion.config.ts"
+import type { ReionConfig } from "reion";
+
+const config: ReionConfig = {
+  security: {
+    headers: { enabled: true },
+    rateLimit: { enabled: true, windowMs: 60_000, max: 100 },
+    requestSize: { enabled: true, maxBodySize: 1_000_000 },
+    ipFilter: { enabled: true, allow: ["127.0.0.1", "::1"], trustProxy: true },
+    csrf: { enabled: true },
+    timeout: { enabled: true, timeoutMs: 15_000 },
+  },
+};
+
+export default config;
+```
+
+## Middleware helpers
+
+```ts
+import { security } from "reion";
+
+export const middleware = [
+  security.headers(),
+  security.rateLimit({ max: 20, windowMs: 60_000 }),
+  security.timeout({ timeoutMs: 5_000 }),
+];
+```
+
+## Features
+
+- `rateLimit`: fixed-window in-memory limiter (default key is client IP)
+- `headers`: secure default HTTP headers (CSP + nosniff + frame/referrer policy)
+- `requestSize`: body size cap for request parsing
+- `ipFilter`: allowlist/denylist with exact IP and CIDR support
+- `csrf`: double-submit style cookie/header token validation
+- `timeout`: per-request timeout with `408` response
+

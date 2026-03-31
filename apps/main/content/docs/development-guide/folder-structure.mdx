@@ -1,0 +1,134 @@
+---
+icon: FolderTree
+title: Folder Structure
+description: Folder structure, file naming conventions, and how Reion maps files to routes, middleware, and events.
+---
+
+# Folder Structure
+
+This guide explains how Reion organizes your `appDir` directory: which folders and file names are special, how URL paths are derived, and how to name files for routes, middleware, and events.
+
+---
+
+## App folder structure
+
+All application code that Reion loads lives under a single **appDir** (by default `./src`, configurable via `reion.config.ts`). The layout looks like this:
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="router">
+      <Folder name="api">
+        <Folder name="(user)">
+          <Folder name="users">
+            <File name="get.route.ts" />
+            <File name="post.route.ts" />
+          </Folder>
+          <Folder name="posts">
+            <File name="route.ts" />
+            <Folder name="[postId]">
+              <File name="route.ts" />
+              <Folder name="author">
+                <File name="route.ts" />
+              </Folder>
+            </Folder>
+          </Folder>
+          <File name="middleware.ts" />
+        </Folder>
+        <Folder name="hello">
+          <File name="route.ts" />
+        </Folder>
+        <File name="middleware.ts" />
+      </Folder>
+    </Folder>
+    <Folder name="events">
+      <File name="userCreatedEmail.event.ts" />
+    </Folder>
+  </Folder>
+  <File name="reion.config.ts" />
+  <File name="package.json" />
+</Files>
+
+- **Routes** — Route files live under `router/`; the **folder path under `router/`** becomes the URL path.
+- **Middleware** — `router/**/middleware.ts` (or `.js`/`.mts`/`.mjs`) applies to that directory and all subpaths (prefix is relative to `router/`).
+- **Events** — Files under `appDir/events/` (including nested folders) are loaded as event handlers.
+
+---
+
+## Route file naming
+
+Reion treats two kinds of files as **route handlers**:
+
+### 1. Single file for all methods: `route.ts`
+
+- **Names:** `route.ts`, `route.js`, `route.mts`, `route.mjs`
+- **Meaning:** This path handles every HTTP method you implement (e.g. `GET`, `POST`).
+- **Exports:** Export a function per method: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, and/or `default` (used when the request method doesn't have its own export).
+
+Example: `router/api/posts/route.ts` → serves `/api/posts` for any method you export.
+
+### 2. One file per method: `get.ts`, `post.route.ts`, etc.
+
+- **Names:** `get.ts`, `post.ts`, `get.route.ts`, `post.route.ts`, etc. (same for `put`, `patch`, `delete`, `head`, `options`).
+- **Extensions:** `.ts`, `.js`, `.mts`, `.mjs`
+- **Meaning:** That path handles only that HTTP method. You can mix: e.g. `route.ts` for GET and `post.route.ts` for POST on the same path.
+- **Exports:** Export the handler as the method name (e.g. `export function GET`) or as `default`.
+
+You **cannot** have two files that both handle the same method for the same path (e.g. two files for GET on `/api/users`); the loader will throw.
+
+---
+
+## How URL paths are built
+
+- The **pathname** of a route is the **directory path** to the folder that contains the route file. The **filename** does not appear in the URL.
+- **Route groups** — A folder whose name is in parentheses is **omitted** from the URL:
+  - `router/api/(user)/users/route.ts` → pathname is **`/api/users`** (not `/api/(user)/users`).
+- **Dynamic segments** — A folder whose name is in square brackets becomes a path parameter:
+  - `router/api/posts/[postId]/route.ts` → pathname **`/api/posts/:postId`**; the matched value is in `ctx.params.postId`.
+- **Optional catch-all** — `[[...param]]` matches the rest of the path (including zero segments). The param name (e.g. `all`) receives the remainder as a single string.
+
+Examples:
+
+| File path | URL path |
+|-----------|----------|
+| `router/route.ts` | `/` |
+| `router/api/hello/route.ts` | `/api/hello` |
+| `router/api/(user)/users/get.route.ts` | `GET /api/users` |
+| `router/api/(user)/posts/[postId]/route.ts` | `/api/posts/:postId` |
+| `router/api/(user)/posts/[postId]/author/route.ts` | `/api/posts/:postId/author` |
+
+---
+
+## Middleware file naming
+
+- **Names:** `middleware.ts`, `middleware.js`, `middleware.mts`, `middleware.mjs`
+- **Placement:** Only under `router/`. The **directory path under `router/`** is the **path prefix** for which the middleware runs. Middleware in a folder runs for that path and all subpaths.
+- **Order:** Middleware is resolved from the root toward the request path (e.g. `router/middleware.ts` then `router/api/middleware.ts` for a request to `/api/hello`).
+
+---
+
+## Event handlers: `appDir/events/`
+
+- **Directory:** `appDir/events/` is scanned **recursively** for event handlers.
+- **File names:** `*.event.ts`, `*.event.js`, `*.event.mts`, `*.event.mjs`, or plain `*.ts` / `*.js` / `*.mts` / `*.mjs` under `events/`.
+- **Event name:** Each folder segment and the file basename (before the extension) are converted camelCase → dot.case, then joined with dots (e.g. `billing/invoicePaid.event.ts` → **`billing.invoice.paid`**; `userCreatedEmail.event.ts` → **`user.created.email`**).
+- **Export:** The file must export a **default** function; that function is registered for the derived event name. Emit from routes with `ctx.emit('event.name', payload)`.
+
+---
+
+## Config and extensions summary
+
+| Kind | Location | File pattern | Notes |
+|------|----------|--------------|--------|
+| **Routes** | Any folder under `router/` | `route.ts`, `get.ts`, `post.route.ts`, etc. | Folder path under `router/` = URL path; `(group)` omitted, `[id]` = param |
+| **Middleware** | Any folder under `router/` | `middleware.ts` | Path prefix = directory path under `router/` |
+| **Events** | `appDir/events/` (recursive) | `*.event.ts`, `*.ts`, etc. | Event name = path segments + basename, each camelCase → dot.case |
+
+Supported extensions for routes and middleware: `.ts`, `.js`, `.mts`, `.mjs`. Use the same extensions for event files.
+
+---
+
+## Next steps
+
+- **Get Started** — Set up a project and run your first route.
+- **Routing** — Dynamic segments, route groups, and method handlers in more detail.
+- **Middleware** — Order, `next()`, and error handling.

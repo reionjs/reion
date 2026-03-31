@@ -1,0 +1,25 @@
+---
+icon: ArrowRightLeft
+title: Request
+description: The request context (`Context`) exposed to routes and middleware.
+---
+
+# Request
+
+Routes and middleware receive a single `ctx` argument (type `Context`).
+
+## Key fields
+
+- `ctx.req`: raw Node.js `IncomingMessage`
+- `ctx.params`: parsed path parameters
+- `ctx.query`: parsed query string parameters (validated/coerced when you use `SCHEMA`)
+- `ctx.body`: parsed request body (for non-GET/HEAD requests)
+- `ctx.state`: mutable per-request state (a plain object)
+- `ctx.emit(name, payload)`: emit an event (see Events)
+- `ctx.logger`: request-scoped logger with trace id bindings
+- `ctx.trace.traceId`: trace id for correlation
+
+## Where it's set
+
+Reion populates `params/query/body` before middleware/handler runs. If you define `SCHEMA`, Reion validates and then replaces `ctx.params`, `ctx.query`, and/or `ctx.body` with validated values.
+
