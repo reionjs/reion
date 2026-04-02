@@ -1,5 +1,5 @@
 {
-  "name": "@reion/better-auth",
+  "name": "@reionjs/better-auth",
   "version": "0.0.1",
   "description": "Better Auth integration for Reion",
   "type": "module",

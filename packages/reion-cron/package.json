@@ -1,5 +1,5 @@
 {
-  "name": "@reion/cron",
+  "name": "@reionjs/cron",
   "version": "0.0.3",
   "description": "Cron schedules, loader, and runner for Reion apps (app/cron/*.cron.ts)",
   "type": "module",
