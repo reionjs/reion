@@ -1,0 +1,30 @@
+{
+  "name": "@reion/cron",
+  "version": "0.0.3",
+  "description": "Cron schedules, loader, and runner for Reion apps (app/cron/*.cron.ts)",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "./dist/index.d.ts",
+  "peerDependencies": {
+    "reion": ">=0.0.6"
+  },
+  "devDependencies": {
+    "reion": "^0.0.6"
+  }
+}

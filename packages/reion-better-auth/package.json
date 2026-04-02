@@ -1,0 +1,36 @@
+{
+  "name": "@reion/better-auth",
+  "version": "0.0.1",
+  "description": "Better Auth integration for Reion",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./setup": {
+      "types": "./dist/setup.d.ts",
+      "default": "./dist/setup.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "better-auth": "^1.0.0",
+    "reion": ">=0.0.1"
+  },
+  "devDependencies": {
+    "better-auth": "^1.0.0",
+    "typescript": "^5.9.0",
+    "reion": "^0.0.1"
+  }
+}
