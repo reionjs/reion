@@ -14,6 +14,11 @@ export type ReionPluginSetupContext = {
    */
   skipInstall?: boolean;
   /**
+   * Install packages with the project’s package manager (same as `reion add`).
+   * Only set when `reion add` ran without `--skip-install`.
+   */
+  installDependencies?: (packages: string[]) => void;
+  /**
    * Patches `reion.config.ts`: merges imports and appends entries to `plugins`.
    * Only supports `reion.config.ts` (not `.js`).
    */

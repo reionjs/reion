@@ -1,6 +1,6 @@
 {
   "name": "@reionjs/better-auth",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Better Auth integration for Reion",
   "type": "module",
   "sideEffects": false,

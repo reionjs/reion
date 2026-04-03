@@ -9,9 +9,10 @@
     "start": "reion start"
   },
   "dependencies": {
-    "reion": "^0.0.1"
+    "reion": "^0.0.2"
   },
   "devDependencies": {
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@types/node": "^25.5.0"
   }
 }

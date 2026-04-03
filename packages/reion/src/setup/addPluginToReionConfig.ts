@@ -44,6 +44,17 @@ function parseExpression(expr: string, languageVersion: ts.ScriptTarget): ts.Exp
   return init;
 }
 
+/** Works for parsed and factory-created (synthetic) property names; `getText(sf)` can fail on synthetic nodes. */
+function propertyNameMatches(name: ts.PropertyName, sf: ts.SourceFile, expected: string): boolean {
+  if (ts.isIdentifier(name)) {
+    return ts.idText(name) === expected;
+  }
+  if (ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+    return name.text === expected;
+  }
+  return name.getText(sf) === expected;
+}
+
 function findConfigObject(sf: ts.SourceFile): ts.ObjectLiteralExpression | null {
   for (const stmt of sf.statements) {
     if (ts.isVariableStatement(stmt)) {
@@ -70,8 +81,34 @@ function getPluginsProperty(
 ): ts.PropertyAssignment | undefined {
   return obj.properties.find(
     (p): p is ts.PropertyAssignment =>
-      ts.isPropertyAssignment(p) && p.name.getText(sf) === "plugins",
+      ts.isPropertyAssignment(p) && propertyNameMatches(p.name, sf, "plugins"),
   );
+}
+
+function ensurePluginsProperty(
+  sf: ts.SourceFile,
+  configObj: ts.ObjectLiteralExpression,
+):
+  | { ok: true; sf: ts.SourceFile; configObj: ts.ObjectLiteralExpression }
+  | { ok: false; error: string } {
+  const factory = ts.factory;
+  if (getPluginsProperty(configObj, sf)) {
+    return { ok: true, sf, configObj };
+  }
+  const pluginsProp = factory.createPropertyAssignment(
+    factory.createIdentifier("plugins"),
+    factory.createArrayLiteralExpression([], false),
+  );
+  const newConfig = factory.updateObjectLiteralExpression(
+    configObj,
+    factory.createNodeArray([...configObj.properties, pluginsProp]),
+  );
+  const newSf = replaceNodeInSourceFile(sf, configObj, newConfig);
+  const newConfigObj = findConfigObject(newSf);
+  if (!newConfigObj) {
+    return { ok: false, error: "Internal error: lost config object after adding plugins." };
+  }
+  return { ok: true, sf: newSf, configObj: newConfigObj };
 }
 
 function replaceNodeInSourceFile<T extends ts.Node>(
@@ -219,7 +256,8 @@ function applyPluginExpressions(
   | { ok: true; sf: ts.SourceFile; pluginsChanged: boolean }
   | { ok: false; error: string } {
   const factory = ts.factory;
-  const configObj = findConfigObject(sf);
+  let workingSf = sf;
+  let configObj = findConfigObject(workingSf);
   if (!configObj) {
     return {
       ok: false,
@@ -227,13 +265,18 @@ function applyPluginExpressions(
         "Could not find config object (expected `const config = { ... }` or `export default { ... }`).",
     };
   }
-  const pluginsProp = getPluginsProperty(configObj, sf);
+  let pluginsArrayTouched = false;
+  let pluginsProp = getPluginsProperty(configObj, workingSf);
   if (!pluginsProp) {
-    return {
-      ok: false,
-      error:
-        'Could not find `plugins` array on config. Add `plugins: []` to reion.config.ts first.',
-    };
+    const ensured = ensurePluginsProperty(workingSf, configObj);
+    if (!ensured.ok) return ensured;
+    workingSf = ensured.sf;
+    configObj = ensured.configObj;
+    pluginsProp = getPluginsProperty(configObj, workingSf);
+    pluginsArrayTouched = true;
+  }
+  if (!pluginsProp) {
+    return { ok: false, error: "Internal error: could not ensure `plugins` array on config." };
   }
   if (!ts.isArrayLiteralExpression(pluginsProp.initializer)) {
     return { ok: false, error: "`plugins` must be an array literal." };
@@ -246,7 +289,7 @@ function applyPluginExpressions(
     let removedAny = false;
     const patterns = removePluginCalleeNames.map((name) => new RegExp(`^${escapeRegExp(name)}\\s*\\(`));
     for (const el of arr.elements) {
-      const text = el.getText(sf).trim();
+      const text = el.getText(workingSf).trim();
       if (patterns.some((re) => re.test(text))) {
         removedAny = true;
         continue;
@@ -263,14 +306,14 @@ function applyPluginExpressions(
             : p,
         ),
       );
-      const newSf = replaceNodeInSourceFile(sf, configObj, newConfig);
+      const newSf = replaceNodeInSourceFile(workingSf, configObj, newConfig);
       const newConfigObj = findConfigObject(newSf);
       if (!newConfigObj) return { ok: false, error: "Internal error: lost config object after edit." };
       const newPluginsProp = getPluginsProperty(newConfigObj, newSf);
       if (!newPluginsProp || !ts.isArrayLiteralExpression(newPluginsProp.initializer)) {
         return { ok: false, error: "Internal error: lost plugins array after edit." };
       }
-      return applyPluginExpressionsInner(
+      const inner = applyPluginExpressionsInner(
         newSf,
         newConfigObj,
         newPluginsProp,
@@ -278,10 +321,29 @@ function applyPluginExpressions(
         pluginExpressions,
         true,
       );
+      if (!inner.ok) return inner;
+      return {
+        ok: true,
+        sf: inner.sf,
+        pluginsChanged: inner.pluginsChanged || pluginsArrayTouched,
+      };
     }
   }
 
-  return applyPluginExpressionsInner(sf, configObj, pluginsPropNode, arr, pluginExpressions, false);
+  const inner = applyPluginExpressionsInner(
+    workingSf,
+    configObj,
+    pluginsPropNode,
+    arr,
+    pluginExpressions,
+    false,
+  );
+  if (!inner.ok) return inner;
+  return {
+    ok: true,
+    sf: inner.sf,
+    pluginsChanged: inner.pluginsChanged || pluginsArrayTouched,
+  };
 }
 
 function applyPluginExpressionsInner(

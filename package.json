@@ -1,5 +1,5 @@
 {
-  "name": "legonode-framework",
+  "name": "ReionJS",
   "private": true,
   "overrides": {
     "reion": "workspace:*"

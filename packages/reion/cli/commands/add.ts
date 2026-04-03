@@ -22,19 +22,26 @@ function detectPackageManager(projectRoot: string): PackageManager {
   return "npm";
 }
 
-function runInstall(projectRoot: string, packageName: string): void {
+function runInstallPackages(projectRoot: string, packageNames: string[]): void {
+  if (packageNames.length === 0) return;
   const pm = detectPackageManager(projectRoot);
   const args: string[] =
     pm === "bun"
-      ? ["add", packageName]
+      ? ["add", ...packageNames]
       : pm === "npm"
-        ? ["install", packageName]
+        ? ["install", ...packageNames]
         : pm === "pnpm"
-          ? ["add", packageName]
-          : ["add", packageName];
-  appLogger.info(`Installing ${packageName} with ${pm}...`);
+          ? ["add", ...packageNames]
+          : ["add", ...packageNames];
+  appLogger.info(`Installing ${packageNames.join(", ")} with ${pm}...`);
   execFileSync(pm, args, { cwd: projectRoot, stdio: "inherit" });
 }
+
+function runInstall(projectRoot: string, packageName: string): void {
+  runInstallPackages(projectRoot, [packageName]);
+}
+
+const BETTER_AUTH_PACKAGES = new Set(["@reionjs/better-auth", "@reion/better-auth"]);
 
 const SETUP_SUBPATH = "setup";
 
@@ -52,11 +59,15 @@ export const addCommand = {
       process.exit(1);
     }
 
+    const trimmed = packageName.trim();
     if (!noInstall) {
-      runInstall(cwd, packageName.trim());
+      runInstall(cwd, trimmed);
+      if (BETTER_AUTH_PACKAGES.has(trimmed)) {
+        runInstallPackages(cwd, ["better-auth"]);
+      }
     }
 
-    const spec = setupSpecifier(packageName.trim());
+    const spec = setupSpecifier(trimmed);
     let setupFn: ReionPluginSetupFn | undefined;
     try {
       const mod = await import(/* webpackIgnore: true */ spec);
@@ -86,8 +97,15 @@ export const addCommand = {
 
     const ctx = {
       cwd,
-      packageName: packageName.trim(),
+      packageName: trimmed,
       skipInstall: noInstall === true,
+      ...(noInstall === true
+        ? {}
+        : {
+            installDependencies: (packages: string[]) => {
+              runInstallPackages(cwd, packages);
+            },
+          }),
       addPluginToReionConfig: (input: Parameters<typeof addPluginToReionConfig>[1]) =>
         addPluginToReionConfig(cwd, input),
       log: {

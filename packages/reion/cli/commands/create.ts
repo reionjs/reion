@@ -284,9 +284,10 @@ const PACKAGE_JSON = (name: string) => `{
     "start": "reion start"
   },
   "dependencies": {
-    "reion": "^0.0.1"
+    "reion": "^0.0.2"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "typescript": "^5.9.0"
   }
 }
@@ -371,8 +372,7 @@ async function runInstall(targetDir: string, noInstall: boolean): Promise<boolea
 
   appLogger.info(`  Installing dependencies with ${selected}...`);
   await new Promise<void>((resolvePromise, reject) => {
-    const args = selected === "bun" ? ["install"] : ["install"];
-    const child = spawn(selected, args, {
+    const child = spawn(selected, ["install"], {
       stdio: "inherit",
       cwd: targetDir,
     });
@@ -386,6 +386,25 @@ async function runInstall(targetDir: string, noInstall: boolean): Promise<boolea
     });
     child.on("error", reject);
   });
+
+  if (selected === "bun") {
+    appLogger.info("  Adding @types/bun...");
+    await new Promise<void>((resolvePromise, reject) => {
+      const child = spawn("bun", ["add", "-d", "@types/bun"], {
+        stdio: "inherit",
+        cwd: targetDir,
+      });
+      child.on("exit", (code) => {
+        if (code === 0) {
+          resolvePromise();
+        } else {
+          reject(new Error(`bun add @types/bun exited with code ${code}`));
+        }
+      });
+      child.on("error", reject);
+    });
+  }
+
   return true;
 }
 

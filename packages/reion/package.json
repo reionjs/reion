@@ -1,6 +1,6 @@
 {
   "name": "reion",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "dependencies": {
     "@inquirer/prompts": "^7.2.0",
     "commander": "^12.0.0",

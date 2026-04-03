@@ -1,10 +1,9 @@
 import type { Context, ReionContext, ReionPlugin } from "reion";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
-import type { BetterAuthInstance } from "./augmentation";
 
 export type BetterAuthPluginOptions = {
   /** Your Better Auth instance (created via `betterAuth({...})`). */
-  auth: BetterAuthInstance;
+  auth: any;
   /** Base path to mount Better Auth handler. Default: `/api/auth`. */
   basePath?: string;
   /**
