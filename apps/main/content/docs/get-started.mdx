@@ -4,8 +4,6 @@ title: Get Started
 description: Set up Reion, create a project, and run your first API in minutes.
 ---
 
-# Get Started
-
 This guide walks you through installing Reion, creating a new project, and running your first API.
 
 ---
@@ -82,7 +80,7 @@ import type { Context } from "reion";
 
 export async function GET(ctx: Context) {
   ctx.res.status(200);
-  return { message: "hello test" };
+  return { message: "Hello from Reion!" };
 }
 ```
 
@@ -232,6 +230,7 @@ Add scripts to `package.json`:
 - **Routing** — File-based routes, dynamic segments, and method handlers.
 - **Middleware** — CORS, logging, and custom middleware order.
 - **Validation** — Request/response schemas and error handling.
-- **CLI reference** — All `reion dev`, `build`, and `start` options.
+- **Plugins** — Cron, Better Auth, and more under [Plugins](/docs/plugins/cron) in the sidebar.
+- **CLI** — `reion create`, `reion dev`, `reion build`, `reion start`, and `reion add` ([CLI concepts](/docs/concepts/cli)).
 
 Use the sidebar or search (⌘K) to find these topics.

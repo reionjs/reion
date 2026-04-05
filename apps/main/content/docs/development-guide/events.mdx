@@ -4,8 +4,6 @@ title: Events
 description: Event handlers in app/events, file naming, event name from filename, emitting from routes, and EventContext.
 ---
 
-# Events
-
 Reion's event bus lets you run logic **after** something happens (e.g. “user created”) without blocking the request. Handlers are registered from files in **`appDir/events/`** and invoked when you call **`ctx.emit(name, payload)`** from a route (or elsewhere). This guide covers file naming, how event names are derived, and how to emit and handle events.
 
 ---
@@ -15,7 +13,7 @@ Reion's event bus lets you run logic **after** something happens (e.g. “user c
 - **Directory:** **`appDir/events/`** is scanned **recursively** so you can group handlers in subfolders (e.g. `events/user/…`, `events/billing/…`).
 - **File names:** `*.event.ts`, `*.event.js`, `*.event.mts`, `*.event.mjs`, or plain `*.ts` / `*.js` / `*.mts` / `*.mjs` in `events/`.
 
-Each file defines **one** handler. The **event name** is built from the path under `events/`: each folder name and the file’s base name (without extension) are turned from **camelCase → dot.case**, then joined with dots.
+Each file defines **one** handler. The **event name** is built from the path under `events/`: each folder name and the file's base name (without extension) are turned from **camelCase → dot.case**, then joined with dots.
 
 | Relative path under `events/` | Event name |
 |--------------------------------|------------|

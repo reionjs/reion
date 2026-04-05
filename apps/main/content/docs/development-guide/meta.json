@@ -1,4 +1,4 @@
 {
   "title": "Development Guide",
-  "pages": ["folder-structure", "routes", "middleware", "events"]
+  "pages": ["folder-structure", "routes", "middleware", "security", "events"]
 }

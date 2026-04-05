@@ -1,12 +1,27 @@
 ---
 icon: SquareTerminal
 title: CLI
-description: "Reion command line interface: dev, build, and start."
+description: "Reion command line interface: create, dev, build, start, and add."
 ---
 
-# CLI
+Reion provides **`reion create`** for new projects, **`reion dev`**, **`reion build`**, and **`reion start`** to run the app, and **`reion add`** to install plugin packages and run their setup when available.
 
-Reion provides three main commands:
+## `reion create`
+
+Scaffolds a new Reion app (or clones a template).
+
+```bash
+npx reion create my-project
+bunx reion create my-project
+```
+
+Options:
+
+- `[name]` — Project directory name, or `.` for the current directory (you will be prompted if omitted in interactive use).
+- `-t, --template <value>` — Built-in template key, a Git URL, or a GitHub tree URL (`github.com/owner/repo/tree/branch/path`).
+- `--no-install` — Skip the package-manager install step after creating files.
+
+The default scaffold includes `package.json`, `tsconfig.json`, `reion.config.ts`, and a sample route under `src/router/`.
 
 ## `reion dev`
 
@@ -24,7 +39,22 @@ Compiles TypeScript sources into the build output directory (default `./dist`).
 
 Starts the built app (no hot reload).
 
+## `reion add`
+
+Installs an npm package (typically a `@reionjs/*` plugin) with your project's package manager, then runs that package's setup script when it exports one (for example file scaffolding and edits to `reion.config.ts`).
+
+```bash
+reion add -p @reionjs/better-auth
+```
+
+Options:
+
+- `-p, --plugin <name>` (required): package name to install, e.g. `@reionjs/better-auth`, `@reionjs/cron`.
+- `--skip-install`: do not run `npm install` / `bun add` / etc. for the plugin; setup still runs. Use this when you manage dependencies yourself. Note that setup steps that install extra packages (such as database drivers) only run automatically when installs are not skipped and the CLI provides an installer hook.
+
 ## Common options
+
+These apply to `dev` and `start` (not `add`, where `-p` is `--plugin`).
 
 - `-p, --port <number>`: server port (default from config or `3000`)
 - `-H, --host <string>`: server host (default `127.0.0.1`)

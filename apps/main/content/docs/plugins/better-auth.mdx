@@ -1,0 +1,174 @@
+---
+icon: KeyRound
+title: Better Auth plugin
+description: Wire Better Auth into Reion with @reionjs/better-auth, route handlers, and optional ctx.auth helpers.
+---
+
+Authentication is provided by **`@reionjs/better-auth`**, which connects [Better Auth](https://www.better-auth.com/) to Reion's HTTP stack.
+
+---
+
+## Install
+
+<Tabs items={["CLI", "Manual"]} className="bg-transparent border-none">
+
+<Tab value="CLI">
+
+From your app root:
+
+<Tabs items={["npm", "yarn", "bun", "pnpm"]}>
+  <Tab value="npm">
+
+```bash
+npx reion add -p @reionjs/better-auth
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn dlx reion add -p @reionjs/better-auth
+```
+
+  </Tab>
+  <Tab value="bun">
+
+```bash
+bunx reion add -p @reionjs/better-auth
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm exec reion add -p @reionjs/better-auth
+```
+
+  </Tab>
+</Tabs>
+
+The setup script will:
+
+- Prompt for a **database** option: **Simple (SQLite file)**, **PostgreSQL**, **MySQL**, or **Manual** (in-memory adapter until you plug in your own database).
+- Install **`better-auth`** and, when you did not pass `--skip-install`, the driver packages for your choice (for example `better-sqlite3` and `@types/better-sqlite3` for SQLite).
+- Scaffold **`src/plugins/better-auth.ts`** and a catch-all auth route at **`src/router/api/auth/[[...params]]/route.ts`**.
+- Register the plugin in **`reion.config.ts`** (including adding `plugins: []` if it was missing).
+
+Use `reion add --skip-install` only if you install dependencies yourself; you may then need to run the package manager commands the setup prints for database drivers.
+
+  </Tab>
+
+  <Tab value="Manual">
+
+Add **`@reionjs/better-auth`** and **`better-auth`**:
+
+<Tabs items={["npm", "yarn", "bun", "pnpm"]}>
+  <Tab value="npm">
+
+```bash
+npm install @reionjs/better-auth better-auth
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @reionjs/better-auth better-auth
+```
+
+  </Tab>
+  <Tab value="bun">
+
+```bash
+bun add @reionjs/better-auth better-auth
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @reionjs/better-auth better-auth
+```
+
+  </Tab>
+</Tabs>
+
+Add your database client the same way (for example **`better-sqlite3`** and **`@types/better-sqlite3`**, or **`pg`**, **`mysql2`**, etc.).
+
+Then add the [auth route](#auth-http-route), [plugin module](#plugin-registration), and **`reion.config.ts`** entries yourself, following the examples below.
+
+  </Tab>
+</Tabs>
+
+---
+
+## Auth HTTP route
+
+The generated route forwards all methods to Better Auth's Node handler and opts into the raw body so Better Auth can read the request correctly:
+
+```ts title="src/router/api/auth/[[...params]]/route.ts"
+import { createBetterAuthRouteHandler } from "@reionjs/better-auth";
+import { auth } from "@/plugins/better-auth.js";
+
+const handleAuth = createBetterAuthRouteHandler(auth);
+export const RAW_BODY = true;
+
+export const GET = handleAuth;
+export const POST = handleAuth;
+export const PUT = handleAuth;
+export const PATCH = handleAuth;
+export const DELETE = handleAuth;
+export const OPTIONS = handleAuth;
+```
+
+Mount path follows your folder structure (here: **`/api/auth/*`**). Adjust the router path if you need a different prefix.
+
+---
+
+## Plugin registration
+
+Your **`better-auth`** instance and plugin export usually live in **`src/plugins/better-auth.ts`**. Register the plugin in **`reion.config.ts`**:
+
+```ts title="reion.config.ts"
+import { betterAuthPlugin } from "./src/plugins/better-auth";
+
+export default {
+  plugins: [betterAuthPlugin],
+};
+```
+
+(Exact import path may differ if setup used a different layout.)
+
+---
+
+## `BetterAuthPlugin` options
+
+```ts
+BetterAuthPlugin({
+  auth, // required: return value of betterAuth({ ... })
+  attachToContext?: boolean; // default true
+});
+```
+
+- **`auth`** — your Better Auth app instance.
+- **`attachToContext`** — when `true` (default), the plugin sets **`ctx.auth`** and **`ctx.authSession()`** on each request so non-auth routes can read the session. Set to `false` if you only want the `/api/auth` routes and no context helpers.
+
+Types for `ctx.auth` / `ctx.authSession` come from the package's module augmentation; importing **`BetterAuthPlugin`** (or anything) from **`@reionjs/better-auth`** loads that augmentation.
+
+---
+
+## Session in a normal route
+
+```ts title="src/router/api/me/route.ts"
+export async function GET(ctx) {
+  const session = await ctx.authSession();
+  if (!session) {
+    ctx.res.status(401);
+    return { error: "Unauthorized" };
+  }
+  ctx.res.status(200);
+  return { user: session.user };
+}
+```
+
+Use **`ctx.auth.api`** for other Better Auth server APIs as needed.

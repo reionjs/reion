@@ -1,12 +1,10 @@
 ---
 icon: FolderTree
 title: Folder Structure
-description: Folder structure, file naming conventions, and how Reion maps files to routes, middleware, and events.
+description: Folder structure, file naming conventions, and how Reion maps files to routes, middleware, security, and events.
 ---
 
-# Folder Structure
-
-This guide explains how Reion organizes your `appDir` directory: which folders and file names are special, how URL paths are derived, and how to name files for routes, middleware, and events.
+This guide explains how Reion organizes your `appDir` directory: which folders and file names are special, how URL paths are derived, and how to name files for routes, middleware, `security.ts`, and events.
 
 ---
 
@@ -38,6 +36,7 @@ All application code that Reion loads lives under a single **appDir** (by defaul
           <File name="route.ts" />
         </Folder>
         <File name="middleware.ts" />
+        <File name="security.ts" />
       </Folder>
     </Folder>
     <Folder name="events">
@@ -50,6 +49,7 @@ All application code that Reion loads lives under a single **appDir** (by defaul
 
 - **Routes** — Route files live under `router/`; the **folder path under `router/`** becomes the URL path.
 - **Middleware** — `router/**/middleware.ts` (or `.js`/`.mts`/`.mjs`) applies to that directory and all subpaths (prefix is relative to `router/`).
+- **Security** — `router/**/security.ts` (or `.js`/`.mts`/`.mjs`) attaches **route-level security config** for that path prefix; see [Security](/docs/development-guide/security).
 - **Events** — Files under `appDir/events/` (including nested folders) are loaded as event handlers.
 
 ---
@@ -106,6 +106,12 @@ Examples:
 
 ---
 
+## Security file naming: `security.ts`
+
+Use **`router/**/security.ts`** (or `.js` / `.mts` / `.mjs`) for path-scoped policies. Naming, exports, merging along the URL, and route-group caveats are covered in the [Security](/docs/development-guide/security) guide.
+
+---
+
 ## Event handlers: `appDir/events/`
 
 - **Directory:** `appDir/events/` is scanned **recursively** for event handlers.
@@ -121,9 +127,10 @@ Examples:
 |------|----------|--------------|--------|
 | **Routes** | Any folder under `router/` | `route.ts`, `get.ts`, `post.route.ts`, etc. | Folder path under `router/` = URL path; `(group)` omitted, `[id]` = param |
 | **Middleware** | Any folder under `router/` | `middleware.ts` | Path prefix = directory path under `router/` |
+| **Security** | Any folder under `router/` | `security.ts` | Path prefix = directory path under `router/`; merged along URL ancestor prefixes — see [Security](/docs/development-guide/security) |
 | **Events** | `appDir/events/` (recursive) | `*.event.ts`, `*.ts`, etc. | Event name = path segments + basename, each camelCase → dot.case |
 
-Supported extensions for routes and middleware: `.ts`, `.js`, `.mts`, `.mjs`. Use the same extensions for event files.
+Supported extensions for routes, middleware, and security: `.ts`, `.js`, `.mts`, `.mjs`. Use the same extensions for event files.
 
 ---
 
@@ -132,3 +139,4 @@ Supported extensions for routes and middleware: `.ts`, `.js`, `.mts`, `.mjs`. Us
 - **Get Started** — Set up a project and run your first route.
 - **Routing** — Dynamic segments, route groups, and method handlers in more detail.
 - **Middleware** — Order, `next()`, and error handling.
+- **Security** — `router/**/security.ts` for rate limits, headers, CSRF, etc. ([Security](/docs/development-guide/security)).

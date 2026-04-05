@@ -1,0 +1,78 @@
+---
+icon: Shield
+title: Security
+description: Configure rate limits, headers, CSRF, and related guards in router/**/security.ts files.
+---
+
+# Security
+
+Reion applies **rate limiting, security headers, request size limits, IP filtering, CSRF checks, and request timeouts** using **`router/**/security.ts`** files. Each file exports a **`SecurityConfig`** (and optional per-method overrides). Reion loads and merges these configs along the request path before the route pipeline runs.
+
+With no `security.ts` files under `router/`, those guards stay off until you add one.
+
+---
+
+## `security.ts` files
+
+Add **`security.ts`** (or `security.js` / `security.mts` / `security.mjs`) under **`router/`**, next to your routes. Path prefixes work the same way as for `middleware.ts`: the folder path under `router/` determines which requests the file applies to.
+
+### Matching and merging
+
+The **path prefix** is the folder path from `router/` down to the directory that contains `security.ts` (the filename is not part of the prefix).
+
+For each request, Reion walks **ancestor prefixes** of the **HTTP pathname** (e.g. `/api/hello` → `""`, `api`, `api/hello`). If a `security.ts` exists for that prefix, its config is **merged** into the effective security (**root first**, then deeper folders).
+
+### Exports
+
+- **`security`** or **`default`** — Object with optional keys: `rateLimit`, `headers`, `requestSize`, `ipFilter`, `csrf`, `timeout` (each can include `enabled` and options). Types are available as **`SecurityConfig`** / related types from **`reion`**.
+- **Per-method overrides** — Optional **`GET_SECURITY`**, **`POST_SECURITY`**, **`PUT_SECURITY`**, **`PATCH_SECURITY`**, **`DELETE_SECURITY`**, **`HEAD_SECURITY`**, **`OPTIONS_SECURITY`**. Each is merged on top of the base export for that HTTP method only.
+
+### Example
+
+```ts title="src/router/security.ts"
+import type { SecurityConfig } from "reion";
+
+export const security: SecurityConfig = {
+  headers: { enabled: true },
+  rateLimit: { enabled: true, windowMs: 60_000, max: 100 },
+  requestSize: { enabled: true, maxBodySize: 1_000_000 },
+  ipFilter: { enabled: true, allow: ["127.0.0.1", "::1"], trustProxy: true },
+  csrf: { enabled: true },
+  timeout: { enabled: true, timeoutMs: 15_000 },
+};
+```
+
+Stricter rules for POST only on the same prefix:
+
+```ts
+export const POST_SECURITY: SecurityConfig = {
+  rateLimit: { enabled: true, windowMs: 60_000, max: 20 },
+};
+```
+
+### Route groups vs URL
+
+Matching uses the **URL path**. Parentheses **route groups** like `(user)` are **not** in the URL.
+
+- `router/api/users/security.ts` → prefix `api/users` → matches requests under **`/api/users`**. ✓  
+- Only `router/api/(user)/users/security.ts` → on-disk prefix `api/(user)/users` → does **not** match URL prefix `api/users`. Prefer **`router/api/users/security.ts`** or a parent like **`router/api/security.ts`** for `/api/*`.
+
+See [Folder structure](/docs/development-guide/folder-structure) for how `router/` maps to URLs.
+
+---
+
+## What each feature does
+
+- **`rateLimit`** — Fixed-window in-memory limiter (default key is client IP).
+- **`headers`** — Secure default HTTP headers (CSP, nosniff, frame/referrer policy, etc.).
+- **`requestSize`** — Body size cap for request parsing.
+- **`ipFilter`** — Allowlist/denylist with exact IP and CIDR support.
+- **`csrf`** — Double-submit style cookie/header token validation.
+- **`timeout`** — Per-request timeout with `408` response.
+
+---
+
+## Next steps
+
+- **Folder structure** — How `router/` maps URLs, routes, and special files.
+- **Middleware** — Order, `next()`, and custom request logic.

@@ -1,12 +1,86 @@
 ---
 icon: Plug
 title: Plugin
-description: Reion plugin hooks for request lifecycle, middleware resolution, events, and CLI lifecycle.
+description: Reion plugin hooks for request lifecycle, middleware resolution, events, CLI lifecycle, and optional add-time setup.
 ---
 
 # Plugin
 
 Plugins let you run code at specific points in Reion's lifecycle.
+
+## Setup script (`reion add`)
+
+If you publish a **plugin package** (npm), you can ship a **setup** entry that runs when someone runs:
+
+```bash
+reion add -p your-package-name
+```
+
+Reion loads `your-package-name/setup` (the `./setup` export), installs the package (unless `--skip-install`), then calls your exported setup function.
+
+### 1. Expose `./setup` in `package.json`
+
+```json title="package.json (excerpt)"
+{
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./setup": {
+      "types": "./dist/setup.d.ts",
+      "default": "./dist/setup.js"
+    }
+  }
+}
+```
+
+Paths should point at your built files (for example after `tsc` emits `dist/setup.js`).
+
+### 2. Implement `setup`
+
+Export a **named** `setup` or a **default** function. Type it with `ReionPluginSetupFn` from `reion`:
+
+```ts title="src/setup.ts"
+import type { ReionPluginSetupFn } from "reion";
+
+export const setup: ReionPluginSetupFn = async (ctx) => {
+  ctx.log.info(`Setting up ${ctx.packageName} in ${ctx.cwd}`);
+
+  // Optional: install extra deps (only when the user did not pass --skip-install)
+  ctx.installDependencies?.(["some-optional-dep"]);
+
+  // Optional: merge imports and append to plugins: [] in reion.config.ts
+  const result = await ctx.addPluginToReionConfig({
+    imports: [{ kind: "named", names: ["myPlugin"], module: "./src/plugins/my-plugin" }],
+    pluginExpressions: ["myPlugin"],
+  });
+  if (!result.ok) {
+    ctx.log.warn(result.error);
+  }
+};
+```
+
+**Context (`ReionPluginSetupContext`):**
+
+| Field | Purpose |
+| --- | --- |
+| `cwd` | Project root where `reion add` was run |
+| `packageName` | Same string passed to `-p` |
+| `skipInstall` | `true` if `reion add --skip-install` was used |
+| `installDependencies` | Call with package names to run the same install command as `reion add` (omitted when `--skip-install`) |
+| `addPluginToReionConfig` | Programmatically edit `reion.config.ts` (TypeScript only) |
+| `log` | `info` / `warn` / `error` loggers |
+
+`addPluginToReionConfig` can add a `plugins: []` property if it is missing, then append your plugin expression. See existing packages such as `@reionjs/better-auth` for full examples.
+
+### 3. App authors
+
+They only need the CLI command; no setup file is required in their app unless you document extra steps.
+
+```bash
+reion add -p @your-scope/your-reion-plugin
+```
 
 ## Configure plugins
 
@@ -37,8 +111,8 @@ Plugins are executed in the order they appear in `plugins: []`.
 - `onRouteMatch(ctx)` — after a route is resolved and `ctx.params` is set
 - `beforeHandler(ctx)` — right before the route handler (or pipeline) runs
 - `afterHandler(ctx, result)` — after the handler returns
-- `beforeResponse(ctx)` — runs right before Reion serializes/sends the response (only if the response hasn’t been sent yet)
-- `afterResponse(ctx)` — runs in Reion’s `finally` block after the response path (success or error)
+- `beforeResponse(ctx)` — runs right before Reion serializes/sends the response (only if the response hasn't been sent yet)
+- `afterResponse(ctx)` — runs in Reion's `finally` block after the response path (success or error)
 - `onError(ctx, error)` — when an error is thrown/handled
 
 ## Middleware hook

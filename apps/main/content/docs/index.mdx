@@ -19,7 +19,7 @@ Reion is a **Node.js and Bun-ready API framework** that focuses on:
 - **File-based routing** — Define routes by placing files in your app directory; no manual router setup.
 - **Type-safe request/response** — Validate bodies and responses with Zod and get full TypeScript inference.
 - **Middleware pipeline** — Compose CORS, logging, and custom logic in a clear order.
-- **CLI-first workflow** — Use `reion dev`, `reion build`, and `reion start` for development and production.
+- **CLI-first workflow** — Use `reion create`, `reion dev`, `reion build`, `reion start`, and `reion add` for projects and plugins.
 
 You write your handlers and middleware in TypeScript; Reion handles routing, validation, body parsing, and server lifecycle. It runs on both **Node.js** (with tsx for `.ts` route files) and **Bun** natively.
 
@@ -41,7 +41,7 @@ Whether you're building a small API or a larger service, Reion gives you structu
 
 | Area | What you get |
 |------|----------------|
-| **CLI** | `reion dev` (hot reload), `reion build`, `reion start` — port, host, and app directory options |
+| **CLI** | `reion create` (scaffold), `reion dev` (hot reload), `reion build`, `reion start`, `reion add` (plugins) — port, host, app directory, templates |
 | **Routing** | File-based route loading, radix-tree matching, and a clear route table |
 | **Middleware** | Resolve, load, and run middleware in order; CORS and custom middleware supported |
 | **Validation** | Zod-based body and response validation with typed context and error handling |
@@ -69,7 +69,7 @@ It fits greenfield APIs, internal tools, and services where you care about clari
 
 ## How do I get started?
 
-1. **Create a project** (or use the example): depend on the `reion` package and set up an `appDir` (default `./src`) with a `router/` folder for routes and middleware (`appDir/router/**`).
+1. **Create a project:** run `npx reion create my-app` (or add `reion` to an existing app and create `appDir/router/**` yourself — default `appDir` is often `./src`).
 2. **Run the dev server:** `reion dev` (default port 3000, configurable with `-p` and `-H`).
 3. **Add routes** as files under your `appDir/router/`; Reion will load and serve them.
 4. **Build for production:** `reion build`, then run with `reion start`.
@@ -80,10 +80,10 @@ The rest of this documentation goes into setup, routing, validation, middleware,
 
 ## What you'll find in these docs
 
-- **Get started** — Set up your environment and run a Reion project.
-- **Concepts** — Routing, middleware, validation, and the request lifecycle.
-- **Reference** — CLI options, config, and APIs.
-- **Examples** — Patterns and best practices.
+- **Get started** — Install Reion, scaffold or wire a project, first routes and production build.
+- **Development guide** — Folder layout, routes, middleware, security, events.
+- **Concepts** — Request/response, validation, CLI, plugins API, tracing, and more.
+- **Plugins** — First-party packages such as Cron and Better Auth.
 
 Use the sidebar to jump to a section, or search (⌘K) to find a topic.
 
@@ -92,6 +92,7 @@ Use the sidebar to jump to a section, or search (⌘K) to find a topic.
 <Cards>
   <Card title="Home" href="/" description="Back to the homepage" />
   <Card title="Get Started" href="/docs/get-started" description="Set up Reion and run your first API" />
+  <Card title="Plugins" href="/docs/plugins/cron" description="Cron, Better Auth, and official add-ons" />
 </Cards>
 
 ## Need help?
