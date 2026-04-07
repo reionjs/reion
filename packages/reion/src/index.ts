@@ -13,7 +13,13 @@ export type {
 export type { Next, Middleware } from "./middleware/middlewareRunner.js";
 export { NextError } from "./middleware/middlewareRunner.js";
 export type { CorsConfig, ErrorHandler, ReionConfig } from "./config/loadConfig.js";
-export { loadConfig, getAppDir, getBuildPath } from "./config/loadConfig.js";
+export {
+  loadConfig,
+  getAppDir,
+  getBuildPath,
+  getRequestHandlerOptionsFromConfig,
+} from "./config/loadConfig.js";
+export type { RequestHandlerOptionsFromConfig } from "./config/loadConfig.js";
 export type {
   ReionPlugin,
   ReionInitContext,
