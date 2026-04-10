@@ -1,0 +1,159 @@
+---
+icon: TestTube
+title: Vitest helpers
+description: Test Reion apps with Vitest—auto boot from reion.config, HTTP client, and minimal boilerplate.
+---
+
+**`@reionjs/vitest`** wraps [Vitest](https://vitest.dev/) so you can start a real HTTP server from your **`reion.config.*`** (using the project root / `process.cwd()`), run requests with **`fetch`**, and tear the server down automatically.
+
+---
+
+## Install
+
+Peer dependencies: **`reion`**, **`vitest`**.
+
+<Tabs items={["CLI", "Manual"]} className="bg-transparent border-none">
+  <Tab value="CLI">
+
+<Tabs items={["npm", "yarn", "bun", "pnpm"]}>
+  <Tab value="npm">
+
+```bash
+npm exec reion add -p @reionjs/vitest
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn dlx reion add -p @reionjs/vitest
+```
+
+  </Tab>
+  <Tab value="bun">
+
+```bash
+bunx reion add -p @reionjs/vitest
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm exec reion add -p @reionjs/vitest
+```
+
+  </Tab>
+</Tabs>
+
+Also install Vitest if you have not:
+
+```bash
+bun add -d vitest
+```
+
+  </Tab>
+  <Tab value="Manual">
+
+<Tabs items={["npm", "yarn", "bun", "pnpm"]}>
+  <Tab value="npm">
+
+```bash
+npm install -D vitest @reionjs/vitest
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add -D vitest @reionjs/vitest
+```
+
+  </Tab>
+  <Tab value="bun">
+
+```bash
+bun add -d vitest @reionjs/vitest
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add -D vitest @reionjs/vitest
+```
+
+  </Tab>
+</Tabs>
+
+  </Tab>
+</Tabs>
+
+---
+
+## Vitest config
+
+Add a minimal `vitest.config.ts` at your project root:
+
+```ts title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    environment: "node",
+  },
+});
+```
+
+---
+
+## Writing tests
+
+Import **`describe`**, **`it`**, and **`expect`** from **`@reionjs/vitest`** (not only from `vitest`) so each suite boots a Reion server from **`reion.config.*`** at **`process.cwd()`**.
+
+```ts title="src/router/api/hello/hello.test.ts"
+import { describe, it, expect } from "@reionjs/vitest";
+
+describe("GET /api/hello", () => {
+  it("returns JSON", async ({ request }) => {
+    const res = await request.get("/api/hello");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ hello: "world" });
+  });
+});
+```
+
+The **`it`** callback receives:
+
+- **`request`** — helpers: `get`, `post`, `put`, `patch`, `delete`, `fetch` (rooted at the test server).
+- **`baseUrl`** — e.g. `http://localhost:<port>`.
+- **`server`** — metadata and **`close()`** if you need manual teardown.
+
+---
+
+## Custom setup
+
+When you need custom boot behavior (different `cwd`, `appDir`, or host), use **`createTestServer()`** directly and build your request client from **`createRequestClient()`**.
+
+---
+
+## Escape hatch
+
+You can still call **`createTestServer()`** and **`createRequestClient()`** from **`@reionjs/vitest`** for custom setups.
+
+---
+
+## Run tests
+
+```bash
+bunx vitest run
+# or
+npx vitest run
+```
+
+---
+
+## Next steps
+
+- [Routing](/docs/development-guide/routes) — URL mapping and handlers.
+- [Middleware](/docs/development-guide/middleware) — order and `next()`.

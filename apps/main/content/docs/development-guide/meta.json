@@ -1,4 +1,11 @@
 {
   "title": "Development Guide",
-  "pages": ["folder-structure", "routes", "middleware", "security", "events"]
+  "pages": [
+    "folder-structure",
+    "routes",
+    "middleware",
+    "security",
+    "events",
+    "environment-variables"
+  ]
 }

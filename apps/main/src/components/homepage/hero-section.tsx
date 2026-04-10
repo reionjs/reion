@@ -2,9 +2,14 @@
 import Link from "next/link";
 import { BookOpen, CheckCheckIcon, CopyIcon, Server } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LottieSVG } from "../icons/lottie-svg";
-import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+
+const LazyLottieSVG = dynamic(
+  () => import("../icons/lottie-svg").then((mod) => mod.LottieSVG),
+  { ssr: false }
+);
 
 export interface HeroSectionProps {
   /** Main headline */
@@ -39,7 +44,23 @@ export function HeroSection({
   className,
 }: HeroSectionProps) {
   const [copied, setCopied] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
   const createCommand = `npx reion@latest create`;
+
+  useEffect(() => {
+    const win = window as Window & {
+      requestIdleCallback?: (callback: () => void) => number;
+    };
+
+    if (win.requestIdleCallback) {
+      win.requestIdleCallback(() => setShowAnimation(true));
+      return;
+    }
+
+    const timeout = setTimeout(() => setShowAnimation(true), 200);
+    return () => clearTimeout(timeout);
+  }, []);
+
   const handleCopyCommand = () => {
     navigator.clipboard.writeText(createCommand);
     setCopied(true);
@@ -50,7 +71,7 @@ export function HeroSection({
   return (
     <section
       className={cn(
-        "relative min-h-[calc(100vh-var(--header-height))] w-full px-4 py-20 sm:px-6 md:py-28 lg:py-32",
+        "relative min-h-[calc(100vh-var(--header-height))] w-full px-4 pt-12 pb-6 sm:px-6 md:py-28 lg:py-32",
         className
       )}
     >
@@ -106,7 +127,7 @@ export function HeroSection({
         {lottieSrc && (
           <div
             className={cn(
-              "pointer-events-none relative w-full shrink-0 overflow-visible rounded-xl p-4 md:max-w-sm lg:max-w-md"
+              "pointer-events-none relative w-3/5 md:w-full shrink-0 overflow-visible rounded-xl p-4 md:max-w-sm lg:max-w-md"
             )}
           >
             {/* Glow behind the SVG */}
@@ -119,13 +140,17 @@ export function HeroSection({
               aria-hidden
             />
             <div className="relative z-10">
-              <LottieSVG
-                src={lottieSrc}
-                className="h-auto w-full"
-                applyTheme={true}
-                width="100%"
-                height="auto"
-              />
+              {showAnimation ? (
+                <LazyLottieSVG
+                  src={lottieSrc}
+                  className="h-auto w-full"
+                  applyTheme={true}
+                  width="100%"
+                  height="auto"
+                />
+              ) : (
+                <div className="h-56 w-full md:h-72" aria-hidden />
+              )}
             </div>
           </div>
         )}

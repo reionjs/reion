@@ -14,11 +14,12 @@ const Logo = ({
   return (
     <Link href={link} className="flex items-center gap-1">
       <Image
-        src={"/logo.png"}
+        src="/logo.webp"
         alt="Logo"
-        width={100}
-        height={100}
-        className="size-8"
+        width={768}
+        height={672}
+        className="size-8 aspect-square"
+        priority
       />
       {iconOnly ? null : (
         <p className="flex items-center text-sm font-bold">

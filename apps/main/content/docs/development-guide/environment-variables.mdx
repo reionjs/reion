@@ -1,0 +1,59 @@
+---
+title: Environment
+description: Built-in env file loading in Reion, supported file patterns, mode behavior, and precedence.
+icon: Env
+---
+
+# Environment Variables
+
+Reion loads environment variables automatically, so you do not need to install `dotenv`.
+
+## Supported Files
+
+Reion reads env files from your project root in this order:
+
+1. `.env`
+2. `.env.local`
+3. `.env.[mode]` (for example: `.env.development`)
+4. `.env.[mode].local` (for example: `.env.development.local`)
+
+`mode` comes from `NODE_ENV`.
+
+- `reion dev` defaults to `development`
+- `reion start` defaults to `production`
+
+## Precedence
+
+- Shell/CI environment variables are preserved and are not overwritten.
+- Later env files can override values from earlier env files.
+
+## Example
+
+```bash
+# .env
+DATABASE_URL="postgres://localhost:5432/reion"
+LOG_LEVEL=info
+```
+
+```ts
+// src/router/ping/route.ts
+import type { Context } from "reion";
+
+export async function GET(ctx: Context) {
+  return {
+    database: process.env.DATABASE_URL,
+    logLevel: process.env.LOG_LEVEL,
+  };
+}
+```
+
+## Important Security Tips
+
+<div className="bg-primary/20 backdrop-blur-lg border border-primary p-2 px-4 rounded-md [&_h4]:mt-1 [&_ul]:mx-4 [&_li]:my-0">
+#### Keep Your Keys Safe
+
+- Never commit `.env` files to git.
+- Use different API keys for development and production.
+- Do not share API keys in code or messages.
+
+</div>

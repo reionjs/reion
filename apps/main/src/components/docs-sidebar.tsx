@@ -16,8 +16,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./ui/collapsible";
-import { useEffect, useState } from "react";
-import { ChevronDownIcon, ChevronRightIcon, LucideIcon } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  HomeIcon,
+  LucideIcon,
+  XIcon,
+} from "lucide-react";
+import HOME_NAV from "@/lib/nav.config";
+import { sidebar } from "@/lib/sidebar";
+import { Button } from "./ui/button";
 
 export interface DocsSidebarProps {
   tree: Root;
@@ -27,24 +36,42 @@ export interface DocsSidebarProps {
 function isHrefActive(pathname: string, href: string): boolean {
   return (
     pathname === href ||
-    (href !== "/docs" && !/^\/docs\/v[^/]+$/.test(href) && pathname.startsWith(href + "/"))
+    (href !== "/docs" &&
+      !/^\/docs\/v[^/]+$/.test(href) &&
+      pathname.startsWith(href + "/"))
   );
 }
 
-function isItemActive(item: Item, pathname: string, currentVersion: string): boolean {
+function isItemActive(
+  item: Item,
+  pathname: string,
+  currentVersion: string
+): boolean {
   const href = buildDocsHref(item.url, currentVersion as DocVersionUrl);
   return isHrefActive(pathname, href);
 }
 
-function isNodeActive(node: Node, pathname: string, currentVersion: string): boolean {
+function isNodeActive(
+  node: Node,
+  pathname: string,
+  currentVersion: string
+): boolean {
   if (node.type === "page") return isItemActive(node, pathname, currentVersion);
-  if (node.type === "folder") return isFolderActive(node, pathname, currentVersion);
+  if (node.type === "folder")
+    return isFolderActive(node, pathname, currentVersion);
   return false;
 }
 
-function isFolderActive(folder: Folder, pathname: string, currentVersion: string): boolean {
-  if (folder.index && isItemActive(folder.index, pathname, currentVersion)) return true;
-  return folder.children.some((child) => isNodeActive(child, pathname, currentVersion));
+function isFolderActive(
+  folder: Folder,
+  pathname: string,
+  currentVersion: string
+): boolean {
+  if (folder.index && isItemActive(folder.index, pathname, currentVersion))
+    return true;
+  return folder.children.some((child) =>
+    isNodeActive(child, pathname, currentVersion)
+  );
 }
 
 function SidebarItem({
@@ -77,9 +104,9 @@ function SidebarItem({
       )}
       style={{ paddingInlineStart: `calc(0.75rem + ${depth * 0.75}rem)` }}
     >
-      {Icon && <span className="flex size-4 items-center justify-center">
-        {Icon}
-      </span>}
+      {Icon && (
+        <span className="flex size-4 items-center justify-center">{Icon}</span>
+      )}
       {item.name}
     </Link>
   );
@@ -206,47 +233,75 @@ function SidebarTree({
 }
 
 export function DocsSidebar({ tree, className }: DocsSidebarProps) {
-  const { open, setOpen } = useSidebar();
+  const open = useSyncExternalStore(
+    sidebar.subscribe,
+    () => sidebar.open,
+    () => sidebar.open
+  );
   const pathname = usePathname();
   const { version: currentVersion } = parseDocsPathname(pathname);
+  const isDocsRoute = pathname.startsWith("/docs");
 
   return (
     <>
-      <div
-        data-sidebar-placeholder
-        className={cn(
-          "bg-sidebar sticky top-(--header-height) z-20 h-[calc(var(--fd-docs-height)-var(--header-height))] border-r [grid-area:sidebar] max-md:hidden md:w-[268px]",
-          className,
-          "top-(-var(--header-height))"
-        )}
-      >
-        <aside
-          id="nd-sidebar"
-          className="border-fd-border bg-fd-card absolute inset-y-0 inset-s-0 flex w-full flex-col overflow-y-auto border-e text-sm no-scrollbar"
+      {isDocsRoute && (
+        <div
+          data-sidebar-placeholder
+          className={cn(
+            "bg-sidebar sticky top-(--header-height) z-20 h-[calc(var(--fd-docs-height)-var(--header-height))] border-r [grid-area:sidebar] max-md:hidden md:w-[268px]",
+            className,
+            "top-(-var(--header-height))"
+          )}
         >
-          <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
-            <DocsVersionDropdown className="mb-2 w-full justify-between" />
-            <SidebarTree tree={tree} currentVersion={currentVersion} />
-          </div>
-        </aside>
-      </div>
+          <aside
+            id="nd-sidebar"
+            className="border-fd-border bg-fd-card no-scrollbar absolute inset-y-0 inset-s-0 flex w-full flex-col overflow-y-auto border-e text-sm"
+          >
+            <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
+              <DocsVersionDropdown className="mb-2 w-full justify-between" />
+              <SidebarTree tree={tree} currentVersion={currentVersion} />
+            </div>
+          </aside>
+        </div>
+      )}
       {/* Mobile drawer */}
       {open && (
         <>
           <div
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
             aria-hidden
-            onClick={() => setOpen(false)}
+            onClick={() => sidebar.setOpen(false)}
           />
           <aside
             className="border-fd-border bg-fd-background fixed inset-y-0 inset-e-0 z-40 flex w-[85%] max-w-[380px] flex-col overflow-y-auto border-s p-4 shadow-lg md:hidden"
             aria-modal
             aria-label="Docs menu"
           >
+            <div className="flex items-center justify-end pb-2">
+              <Button variant="ghost" size="icon-sm" onClick={() => sidebar.setOpen(false)}>
+                <XIcon />
+              </Button>
+            </div>
             <DocsVersionDropdown className="mb-2 w-full justify-between" />
+
+            {HOME_NAV.map((item) => (
+              <SidebarItem
+                key={item.href}
+                item={{
+                  name: item.label,
+                  url: item.href,
+                  icon: <item.icon className="size-4" />,
+                  type: "page",
+                }}
+                depth={0}
+                onLinkClick={() => sidebar.setOpen(false)}
+                currentVersion={""}
+              />
+            ))}
+
             <SidebarTree
               tree={tree}
-              onLinkClick={() => setOpen(false)}
+              onLinkClick={() => sidebar.setOpen(false)}
               currentVersion={currentVersion}
             />
           </aside>

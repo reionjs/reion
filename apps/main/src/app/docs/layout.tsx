@@ -13,7 +13,7 @@ export default function Layout({ children }: LayoutProps<"/docs">) {
       {...options}
       nav={{
         ...options.nav,
-        component: <TopBar showSidebarTrigger />,
+        component: <TopBar />,
       }}
       sidebar={{
         enabled: true,
