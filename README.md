@@ -1,4 +1,4 @@
-# Legonode
+# Reion
 
 A file-based API framework for Node.js and Bun. Define routes as files under an app directory, add middleware, and run with hot reload in development or a built server in production.
 
@@ -14,9 +14,9 @@ This scaffolds a minimal project and starts the dev server (default: http://127.
 ### Add to an existing project
 
 ```bash
-npm install legonode
-# or: bun add legonode
-# or: yarn add legonode
+npm install reion
+# or: bun add Reion
+# or: yarn add Reion
 ```
 
 Add a **`router/`** tree under your app directory (see [Project structure](#project-structure)) and a `reion.config.ts`.
@@ -49,12 +49,12 @@ my-api/
 │   │           └── route.ts    → GET /api/hello
 │   ├── events/                 ← optional: *.event.ts
 │   └── cron/                   ← optional: *.cron.ts
-├── legonode.config.ts
+├── reion.config.ts
 ├── package.json
 └── tsconfig.json
 ```
 
-- **`appDir`** (config, default **`./src`**) — Project root for Legonode: **`router/`** (routes + `router/**/middleware.ts`), **`events/`**, **`cron/`**.
+- **`appDir`** (config, default **`./src`**) — Project root for reion: **`router/`** (routes + `router/**/middleware.ts`), **`events/`**, **`cron/`**.
 - **`reion.config.ts`** — Optional: port, host, CORS, logging, dev options, plugins.
 
 **Migration from older layouts:** If you used `appDir: "./src/app"` with routes under `src/app/api/...`, move them to `src/router/api/...` and set `appDir` to `./src` (or keep a single app root and use `router/` next to your other folders).
@@ -68,7 +68,7 @@ import type { Context } from "reion";
 
 export async function GET(ctx: Context) {
   ctx.res.status(200);
-  return { message: "Hello from Legonode" };
+  return { message: "Hello from Reion" };
 }
 ```
 
@@ -90,9 +90,9 @@ Export `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, etc. from a `route.ts` file (or 
 Example `reion.config.ts`:
 
 ```ts
-import type { LegonodeConfig } from "reion";
+import type { ReionConfig } from "reion";
 
-const config: LegonodeConfig = {
+const config: ReionConfig = {
   appDir: "./src", // default
   port: 3000,
   dev: {
