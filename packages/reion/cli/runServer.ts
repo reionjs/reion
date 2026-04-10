@@ -1,6 +1,7 @@
 import { join, relative, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { getAppDir, getBuildPath, loadConfig } from "../src/config/loadConfig.js";
+import { loadEnv } from "../src/config/env.js";
 import type { StartOptions } from "./commands/start.js";
 import { appLogger } from "../src/utils/logger.js";
 import { runPluginHook } from "./pluginHooks.js";
@@ -10,6 +11,7 @@ import { setupServer } from "../src/server/server.js";
 const runServer = async (opts: StartOptions={}) => {
     const host = opts.host ?? "127.0.0.1";
     const cwd = process.cwd();
+    loadEnv(cwd, process.env.NODE_ENV ?? "production");
     const config = await loadConfig(cwd);
     const plugins = config.plugins;
     const buildPath = opts.buildPath ? resolve(cwd, opts.buildPath) : getBuildPath(config, cwd);

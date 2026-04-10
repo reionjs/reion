@@ -102,6 +102,31 @@ const config: ReionConfig = {
 export default config;
 ```
 
+## Environment variables
+
+Reion loads environment variables automatically from the project root:
+
+- `.env`
+- `.env.local`
+- `.env.[mode]` (for example: `.env.development`)
+- `.env.[mode].local` (for example: `.env.development.local`)
+
+Load order is:
+
+1. `.env`
+2. `.env.local`
+3. `.env.[mode]`
+4. `.env.[mode].local`
+
+`mode` comes from `NODE_ENV` (`development` default in `reion dev`, `production` default in `reion start`).
+
+Precedence rules:
+
+- Existing environment variables (for example from shell/CI) are never overwritten.
+- Files only fill keys that are not already present in `process.env`.
+
+This works out of the box for `reion dev` and `reion start`, so you can read vars in `reion.config.ts` and route handlers without installing `dotenv`.
+
 ## License
 
 See the repository for license information.

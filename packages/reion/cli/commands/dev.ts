@@ -16,6 +16,7 @@ import {
   isLikelyEventHandlerFilename,
 } from "../../src/events/eventExecutor.js";
 import { clearRouteSecurityConfigCache } from "../../src/security/securityConfigLoader.js";
+import { loadEnv } from "../../src/config/env.js";
 import { reloadRoutes } from "../../src/router/routeLoader.js";
 import { runPluginHook } from "../pluginHooks.js";
 import { appLogger } from "../../src/utils/logger.js";
@@ -45,6 +46,7 @@ function isWatchFile(filename: string): "watch" | "incomingMessage" | "other" {
 
 async function run(opts: DevOptions = {}) {
   const cwd = process.cwd();
+  loadEnv(cwd, process.env.NODE_ENV ?? "development");
 
   const config = await loadConfig(cwd);
   const plugins = config.plugins;
