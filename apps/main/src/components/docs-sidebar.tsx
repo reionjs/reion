@@ -3,7 +3,6 @@
 import Link from "fumadocs-core/link";
 import type { Root, Node, Item, Folder } from "fumadocs-core/page-tree";
 import { usePathname } from "next/navigation";
-import { useSidebar } from "fumadocs-ui/components/sidebar/base";
 import { cn } from "@/lib/utils";
 import { DocsVersionDropdown } from "./docs-version-dropdown";
 import {
@@ -19,10 +18,7 @@ import {
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   ChevronDownIcon,
-  ChevronRightIcon,
-  HomeIcon,
-  LucideIcon,
-  XIcon,
+  ChevronRightIcon, XIcon
 } from "lucide-react";
 import HOME_NAV from "@/lib/nav.config";
 import { sidebar } from "@/lib/sidebar";
@@ -86,7 +82,7 @@ function SidebarItem({
   currentVersion: string;
 }) {
   const pathname = usePathname();
-  const href = buildDocsHref(item.url, currentVersion as DocVersionUrl);
+  const href = item.url.startsWith("/docs") ?  buildDocsHref(item.url, currentVersion as DocVersionUrl): item.url;
   const isActive =
     pathname === href ||
     (href !== "/docs" &&
