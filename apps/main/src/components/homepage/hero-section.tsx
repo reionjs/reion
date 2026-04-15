@@ -74,7 +74,7 @@ export function HeroSection({
             "radial-gradient(65% 55% at 20% 20%, color-mix(in oklch, var(--primary) 24%, transparent), transparent 60%), radial-gradient(70% 60% at 82% 18%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 64%)",
         }}
       />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--border)_45%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--border)_45%,transparent)_1px,transparent_1px)] bg-[size:42px_42px] opacity-25" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--border)_45%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--border)_45%,transparent)_1px,transparent_1px)] bg-size-[42px_42px] opacity-25" />
       {lottieSrc ? (
         <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center opacity-10">
           <div className="h-[85%] w-[85%] max-w-5xl translate-x-4 translate-y-4 md:translate-x-1/3 md:translate-y-6">
