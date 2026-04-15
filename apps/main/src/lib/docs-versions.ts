@@ -7,7 +7,7 @@ export type DocVersionUrl = (typeof DOC_VERSION_URL_SEGMENTS)[number];
 
 /** Full version label for display (e.g. 0.0.1, 1.12.1). */
 export const DOC_VERSION_LABELS: Record<DocVersionUrl, string> = {
-  '0': '0.0.4',
+  '0': '0.0.5',
 };
 
 export const DEFAULT_DOC_VERSION: DocVersionUrl = DOC_VERSION_URL_SEGMENTS[0];
