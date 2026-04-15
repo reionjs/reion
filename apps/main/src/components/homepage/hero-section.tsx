@@ -1,15 +1,16 @@
 "use client";
 import Link from "next/link";
-import { BookOpen, CheckCheckIcon, CopyIcon, Server } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCheckIcon,
+  CopyIcon,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
-
-const LazyLottieSVG = dynamic(
-  () => import("../icons/lottie-svg").then((mod) => mod.LottieSVG),
-  { ssr: false }
-);
+import { LottieSVG } from "../icons/lottie-svg";
 
 export interface HeroSectionProps {
   /** Main headline */
@@ -44,66 +45,89 @@ export function HeroSection({
   className,
 }: HeroSectionProps) {
   const [copied, setCopied] = useState(false);
-  const [showAnimation, setShowAnimation] = useState(false);
   const createCommand = `npx reion@latest create`;
+  const featurePills = useMemo(
+    () => ["File-based routing", "Typed middleware", "Built-in security"],
+    []
+  );
 
-  useEffect(() => {
-    const win = window as Window & {
-      requestIdleCallback?: (callback: () => void) => number;
-    };
-
-    if (win.requestIdleCallback) {
-      win.requestIdleCallback(() => setShowAnimation(true));
-      return;
-    }
-
-    const timeout = setTimeout(() => setShowAnimation(true), 200);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  const handleCopyCommand = () => {
-    navigator.clipboard.writeText(createCommand);
+  const handleCopyCommand = async () => {
+    await navigator.clipboard.writeText(createCommand);
     setCopied(true);
     setTimeout(() => {
       setCopied(false);
     }, 2000);
   };
+
   return (
     <section
       className={cn(
-        "relative min-h-[calc(100vh-var(--header-height))] w-full px-4 pt-12 pb-6 sm:px-6 md:py-28 lg:py-32",
+        "relative isolate overflow-hidden px-4 pt-14 pb-10 sm:px-6 md:pt-24 md:pb-20 lg:pt-28",
         className
       )}
     >
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-12 md:flex-row md:items-center md:justify-between md:gap-16 lg:gap-20">
-        {/* Left: copy */}
-        <div className="flex flex-1 flex-col text-center md:max-w-xl md:text-left lg:max-w-2xl">
-          <h1 className="text-foreground text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            {title}
+      <div
+        className="pointer-events-none absolute inset-0 -z-10"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(65% 55% at 20% 20%, color-mix(in oklch, var(--primary) 24%, transparent), transparent 60%), radial-gradient(70% 60% at 82% 18%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 64%)",
+        }}
+      />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,color-mix(in_oklch,var(--border)_45%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--border)_45%,transparent)_1px,transparent_1px)] bg-[size:42px_42px] opacity-25" />
+      {lottieSrc ? (
+        <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center opacity-10">
+          <div className="h-[85%] w-[85%] max-w-5xl translate-x-4 translate-y-4 md:translate-x-1/3 md:translate-y-6">
+            <LottieSVG
+              src={lottieSrc}
+              className="h-full w-full"
+              applyTheme={true}
+              width="100%"
+              height="100%"
+            />
+          </div>
+          <div className="absolute inset-0 bg-linear-to-b from-transparent via-background/30 to-background/80" />
+        </div>
+      ) : null}
+
+      <div className="mx-auto max-w-4xl">
+        <div className="text-center">
+          <div className="border-border/70 bg-background/70 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs backdrop-blur">
+            <Sparkles className="text-primary size-3.5" />
+            Modern TypeScript framework for APIs
+          </div>
+
+          <h1 className="text-foreground mt-5 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl md:text-6xl">
+            <span className="block">{title}</span>
+            <span className="from-primary via-chart-3 to-primary block bg-linear-to-r bg-clip-text text-transparent">
+              in minutes, not weeks
+            </span>
           </h1>
-          <p className="text-muted-foreground mt-4 text-lg sm:text-xl md:mt-6">
+
+          <p className="text-muted-foreground mx-auto mt-5 max-w-2xl text-base leading-relaxed sm:text-lg">
             {description}
           </p>
-          <div className="text-muted-foreground mt-6 flex flex-wrap items-center justify-center gap-6 text-sm md:justify-start">
-            <span className="inline-flex items-center gap-2">
-              <Server className="text-primary size-4" aria-hidden />
-              APIs
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Server className="text-primary size-4" aria-hidden />
-              Servers
-            </span>
-            <span>Type-safe</span>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {featurePills.map((item) => (
+              <span
+                key={item}
+                className="border-border/70 bg-background/75 text-muted-foreground inline-flex items-center rounded-full border px-3 py-1 text-xs backdrop-blur-sm"
+              >
+                {item}
+              </span>
+            ))}
           </div>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:justify-start">
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button
               onClick={handleCopyCommand}
               className={cn(
-                "hover:bg-background hover:text-foreground hover:border-border hover:drop-shadow-primary h-10 gap-4 hover:scale-105 hover:cursor-pointer hover:drop-shadow-md transition-all"
+                "h-10 gap-3 rounded-lg px-4 text-sm shadow-sm transition-transform hover:-translate-y-0.5 hover:cursor-pointer"
               )}
             >
               {createCommand}
-              <span className="border-l pl-2">
+              <span className="border-primary-foreground/30 border-l pl-2">
                 {copied ? (
                   <CheckCheckIcon className="size-4" />
                 ) : (
@@ -114,46 +138,31 @@ export function HeroSection({
             <Link
               href={secondaryCtaHref}
               className={cn(
-                "border-border bg-background text-foreground inline-flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-medium",
-                "hover:bg-muted hover:text-foreground focus-visible:ring-ring transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                "border-border bg-background/70 text-foreground inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium backdrop-blur-sm",
+                "hover:bg-muted focus-visible:ring-ring transition-colors focus-visible:ring-2 focus-visible:outline-none"
               )}
             >
               <BookOpen className="size-4" />
               {secondaryCtaLabel}
+              <ArrowRight className="size-4" />
             </Link>
           </div>
-        </div>
-        {/* Right: Lottie */}
-        {lottieSrc && (
-          <div
-            className={cn(
-              "pointer-events-none relative w-3/5 md:w-full shrink-0 overflow-visible rounded-xl p-4 md:max-w-sm lg:max-w-md"
-            )}
-          >
-            {/* Glow behind the SVG */}
-            <div
-              className="pointer-events-none absolute inset-0 rounded-xl opacity-90"
-              style={{
-                background:
-                  "radial-gradient(ellipse 75% 65% at 50% 50%, rgba(234,88,12,0.35) 0%, rgba(234,88,12,0.15) 40%, transparent 65%)",
-              }}
-              aria-hidden
-            />
-            <div className="relative z-10">
-              {showAnimation ? (
-                <LazyLottieSVG
-                  src={lottieSrc}
-                  className="h-auto w-full"
-                  applyTheme={true}
-                  width="100%"
-                  height="auto"
-                />
-              ) : (
-                <div className="h-56 w-full md:h-72" aria-hidden />
-              )}
+
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="border-border/70 bg-background/70 rounded-xl border p-3 backdrop-blur">
+              <p className="text-foreground text-lg font-semibold">100%</p>
+              <p className="text-muted-foreground text-xs">Type-safe handlers</p>
+            </div>
+            <div className="border-border/70 bg-background/70 rounded-xl border p-3 backdrop-blur">
+              <p className="text-foreground text-lg font-semibold">&lt; 1m</p>
+              <p className="text-muted-foreground text-xs">Bootstrap to first API</p>
+            </div>
+            <div className="border-border/70 bg-background/70 col-span-2 rounded-xl border p-3 backdrop-blur sm:col-span-1">
+              <p className="text-foreground text-lg font-semibold">Core + Plugins</p>
+              <p className="text-muted-foreground text-xs">Cron, auth, and custom extensions</p>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

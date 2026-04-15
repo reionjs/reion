@@ -4,11 +4,12 @@ import Link from "next/link";
 import {
   BookOpen,
   BrainCircuitIcon,
-  FolderTreeIcon, Plug,
+  FolderTreeIcon,
+  Plug,
   RocketIcon,
   Search,
   Sidebar,
-  type LucideIcon
+  type LucideIcon,
 } from "lucide-react";
 import { useSearchContext } from "fumadocs-ui/contexts/search";
 import { ThemeDropdown } from "@/components/theme-dropdown";
@@ -109,7 +110,7 @@ export function TopBar({ className }: TopBarProps) {
       id="nd-subnav"
       data-transparent={false}
       className={cn(
-        "sticky top-(--fd-docs-row-1) z-30 flex items-center justify-between gap-2 border-b ps-4 pe-2.5 backdrop-blur-sm transition-colors [grid-area:header]",
+        "sticky top-0 z-30 flex items-center justify-between gap-2 border-b ps-4 pe-2.5 backdrop-blur-sm transition-colors [grid-area:header]",
         "h-(--fd-header-height) min-h-14 md:min-h-14",
         "bg-fd-background/80",
         className
