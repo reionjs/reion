@@ -5,12 +5,10 @@ import { source } from "@/lib/source";
 export default function Layout({ children }: LayoutProps<"/">) {
   const tree = source.getPageTree();
   return (
-    <div>
+    <div className="relative h-svh overflow-auto">
       <TopBar />
       <DocsSidebar tree={tree} className="mt-14 md:hidden" />
-      <div className="bg-background h-[calc(100svh-var(--header-height))] overflow-auto">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }

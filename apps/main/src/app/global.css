@@ -266,6 +266,48 @@
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+@keyframes orbitClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitCounter {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes drawLine {
+  0%,
+  100% {
+    stroke-dasharray: 120;
+    stroke-dashoffset: 120;
+  }
+  50% {
+    stroke-dasharray: 120;
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-orbit-slow {
+  animation: orbitClockwise 14s linear infinite;
+}
+
+.animate-orbit-reverse {
+  animation: orbitCounter 18s linear infinite;
+}
+
+.animate-draw-line {
+  animation: drawLine 5s ease-in-out infinite;
+}
 /* Small screen: header + main only (sidebar in drawer) */
 #nd-docs-layout {
   align-items: start;

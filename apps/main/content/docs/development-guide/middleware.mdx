@@ -222,7 +222,7 @@ For `GET /api/users`, the order is: `router/api/middleware.ts` (logRequest) → 
 | **File names**  | `middleware.ts` (or `.js`, `.mts`, `.mjs`) under `router/` (i.e. `{appDir}/router/**`).                                  |
 | **Path prefix** | The folder path relative to `appDir/router/` (e.g. `api`, `api/(user)`). Middleware runs for that path and all subpaths. |
 | **Order**       | Ancestor-first: root → … → exact path. Same order as the path segments.                                                  |
-| **Exports**     | `default`: array of `(ctx, next) => void \| Promise&lt;void&gt;`. Optional: `GET_middleware`, `POST_middleware`, etc.    |
+| **Exports**     | `default`: array of `(ctx, next) => void \| Promise<void>`. Optional: `GET_middleware`, `POST_middleware`, etc.    |
 | **next()**      | Call `next()` to continue; call `next(err)` to pass an error to the error handler.                                       |
 
 For route structure and path conventions, see [Folder Structure](/docs/development-guide/folder-structure). For routes and validation, see [Routes](/docs/development-guide/routes).

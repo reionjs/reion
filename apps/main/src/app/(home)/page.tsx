@@ -1,4 +1,10 @@
-import { HeroSection } from '@/components/homepage';
+import {
+  HeroSection,
+  FeaturesSection,
+  CodeExamplesSection,
+  WorkflowSection,
+  CtaSection,
+} from "@/components/homepage";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -17,6 +23,10 @@ export default function HomePage() {
         secondaryCtaLabel="Read the docs"
         secondaryCtaHref="/docs"
       />
+      <FeaturesSection />
+      <CodeExamplesSection />
+      <WorkflowSection />
+      <CtaSection />
     </main>
   );
 }

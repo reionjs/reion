@@ -1,24 +1,8 @@
 import { ImageResponse } from "@takumi-rs/image-response";
-import { notFound } from "next/navigation";
-
-import { getPageImage, source } from "@/lib/source";
 
 export const revalidate = false;
 
-export async function GET(
-  _req: Request,
-  { params }: RouteContext<"/og/docs/[...slug]">
-) {
-  const { slug } = await params;
-  console.log(slug);
-  const page = source.getPage(slug.slice(0, -1));
-  if (!page) notFound();
-
-  const pageTitle = page.data.title;
-  const pageDescription =
-    page.data.description ??
-    "Reion docs for building APIs and servers with type safety.";
-
+export async function GET() {
   return new ImageResponse(
     <div
       style={{
@@ -33,7 +17,7 @@ export async function GET(
         color: "#f8f8f8",
         fontFamily:
           "Inter, Geist, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
-        padding: "56px 64px",
+        padding: "58px 64px",
       }}
     >
       <div
@@ -96,11 +80,11 @@ export async function GET(
             letterSpacing: "0.02em",
           }}
         >
-          Reion Docs
+          Reion
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px", zIndex: 1 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "18px", zIndex: 1 }}>
         <div
           style={{
             display: "inline-flex",
@@ -113,28 +97,28 @@ export async function GET(
             background: "rgba(34, 22, 8, 0.7)",
           }}
         >
-          /docs/{page.slugs.join("/")}
+          Type-safe backend framework
         </div>
         <div
           style={{
-            fontSize: "70px",
-            lineHeight: 1.05,
+            fontSize: "72px",
+            lineHeight: 1.04,
             fontWeight: 700,
             letterSpacing: "-0.025em",
-            maxWidth: "1020px",
+            maxWidth: "1040px",
           }}
         >
-          {pageTitle}
+          Build APIs and servers at the speed of lightning
         </div>
         <div
           style={{
             fontSize: "32px",
-            lineHeight: 1.25,
+            lineHeight: 1.28,
             color: "rgba(255,255,255,0.82)",
             maxWidth: "980px",
           }}
         >
-          {pageDescription}
+          Production-ready runtime, typed middleware, and a plugin ecosystem for teams that move fast.
         </div>
       </div>
 
@@ -148,7 +132,7 @@ export async function GET(
           color: "rgba(255,255,255,0.86)",
         }}
       >
-        <div>reionjs.com</div>
+        <div>reion.onlydev.com</div>
         <div
           style={{
             border: "1px solid rgba(245, 158, 11, 0.45)",
@@ -157,7 +141,7 @@ export async function GET(
             background: "rgba(42, 27, 10, 0.72)",
           }}
         >
-          Type-safe APIs and servers
+          Docs, plugins, and tooling
         </div>
       </div>
     </div>,
@@ -167,11 +151,4 @@ export async function GET(
       format: "webp",
     }
   );
-}
-
-export function generateStaticParams() {
-  return source.getPages().map((page) => ({
-    lang: page.locale,
-    slug: getPageImage(page).segments,
-  }));
 }
